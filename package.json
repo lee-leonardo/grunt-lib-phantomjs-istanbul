@@ -2,14 +2,14 @@
   "name": "grunt-lib-phantomjs-istanbul",
   "description": "Grunt and PhantomJS, sitting in a tree for istanbul based code coverage.",
   "version": "1.0.1",
-  "homepage": "http://github.com/asciidisco/grunt-lib-phantomjs-istanbul",
+  "homepage": "https://github.com/lee-leonardo/grunt-lib-puppeteer-istanbul",
   "author": {
-    "name": "Grunt Team",
-    "url": "http://gruntjs.com/"
+    "name": "Leonardo Lee",
+    "url": ""
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/asciidisco/grunt-lib-phantomjs-istanbul.git"
+    "url": "git@github.com:lee-leonardo/grunt-lib-puppeteer-istanbul.git"
   },
   "bugs": {
     "url": "https://github.com/asciidisco/grunt-lib-phantomjs-istanbul/issues"
@@ -17,7 +17,7 @@
   "licenses": [
     {
       "type": "MIT",
-      "url": "http://github.com/asciidisco/grunt-lib-phantomjs-istanbul/blob/master/LICENSE-MIT"
+      "url": "https://github.com/lee-leonardo/grunt-lib-puppeteer-istanbul/blob/master/LICENSE-MIT"
     }
   ],
   "engines": {
@@ -42,6 +42,6 @@
   "main": "lib/phantomjs",
   "files": [
     "lib",
-    "phantomjs"
+    "puppeteer"
   ]
 }
