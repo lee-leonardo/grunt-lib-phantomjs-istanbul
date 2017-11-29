@@ -24,7 +24,11 @@
     "node": ">= 7.6.0"
   },
   "scripts": {
-    "test": "grunt jshint test"
+    "test": "grunt jshint test",
+    "generateBin": "npm link"
+  },
+  "bin": {
+    "grunt-puppeteer": "./bin/grunt-puppeteer.js"
   },
   "dependencies": {
     "eventemitter2": "^0.4.9",
