@@ -11,7 +11,7 @@ exports.init = function (grunt) {
   var EventEmitter2 = require('eventemitter2').EventEmitter2;
 
   // Get path to Puppeteer binary
-  var binPath = require('phantomjs-prebuilt').path; //TODO need to change this
+  var binPath = "./bin/grunt-puppeteer.js";
 
   // The module to be exported is an event emitter.
   var exports = new EventEmitter2({
@@ -86,7 +86,7 @@ exports.init = function (grunt) {
       }
     };
 
-    (function pollLoop() {
+    (function pollingLoop() {
       // Disable logging temporarily.
       grunt.log.muted = true;
       // Read the file, splitting lines on \n, and removing a trailing line.
@@ -157,7 +157,7 @@ exports.init = function (grunt) {
 
     // Actually spawn Puppeteer.
     return puppeteerHandle = grunt.util.spawn({
-      cmd: binPath, //TODO need to change this
+      cmd: binPath,
       args: args
     }, function (err, result, code) {
       if (!err) {
