@@ -10,8 +10,8 @@ exports.init = function (grunt) {
   var Tempfile = require('temporary').File;
   var EventEmitter2 = require('eventemitter2').EventEmitter2;
 
-  // Get path to phantomjs binary
-  var binPath = require('phantomjs-prebuilt').path;
+  // Get path to Puppeteer binary
+  var binPath = require('phantomjs-prebuilt').path; //TODO need to change this
 
   // The module to be exported is an event emitter.
   var exports = new EventEmitter2({
@@ -69,7 +69,7 @@ exports.init = function (grunt) {
 
     // Internal methods.
     var privates = {
-      // Abort if PhantomJS version isn't adequate.
+      // Abort if Puppeteer version isn't adequate.
       version: function (version) {
         var current = [version.major, version.minor, version.patch].join('.');
         var required = '>= 1.6.0';
@@ -81,7 +81,7 @@ exports.init = function (grunt) {
             required + ' must be installed, but version ' + current +
             ' was detected.'
           );
-          grunt.warn('The correct version of PhantomJS needs to be installed.', 127);
+          grunt.warn('The correct version of Puppeteer needs to be installed.', 127);
         }
       }
     };
@@ -127,9 +127,9 @@ exports.init = function (grunt) {
 
     // Process options.
     var failCode = options.failCode || 0;
-    // An array of optional PhantomJS --args.
+    // An array of optional Puppeteer --args.
     var args = [];
-    // Additional options for the PhantomJS main.js script.
+    // Additional options for the Puppeteer main.js script.
     var opts = {};
 
     // Build args array / opts object.
@@ -141,23 +141,23 @@ exports.init = function (grunt) {
       }
     });
 
-    // Keep -- PhantomJS args first, followed by grunt-specific args.
+    // Keep -- Puppeteer args first, followed by grunt-specific args.
     args.push(
-      // The main PhantomJS script file.
+      // The main Puppeteer script file.
       opts.phantomScript || asset('phantomjs/main.js'),
       // The temporary file used for communications.
       tempfile.path,
       // URL or path to the page .html test file to run.
       pageUrl,
-      // Additional PhantomJS options.
+      // Additional Puppeteer options.
       JSON.stringify(opts)
     );
 
     grunt.log.debug(JSON.stringify(args));
 
-    // Actually spawn PhantomJS.
+    // Actually spawn Puppeteer.
     return puppeteerHandle = grunt.util.spawn({
-      cmd: binPath,
+      cmd: binPath, //TODO need to change this
       args: args
     }, function (err, result, code) {
       if (!err) {
