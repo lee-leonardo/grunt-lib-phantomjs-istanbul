@@ -30,7 +30,7 @@ exports.init = function (grunt) {
   };
 
   exports.spawn = function (pageUrl, options) {
-    // Create temporary file to be used for grunt-phantom communication.
+    // Create temporary file to be used for grunt-puppeteer communication.
     var tempfile = new Tempfile();
     // Timeout ID.
     var id;
@@ -144,7 +144,7 @@ exports.init = function (grunt) {
     // Keep -- Puppeteer args first, followed by grunt-specific args.
     args.push(
       // The main Puppeteer script file.
-      opts.phantomScript || asset('phantomjs/main.js'),
+      opts.puppeteerScript || asset('./main.js'),
       // The temporary file used for communications.
       tempfile.path,
       // URL or path to the page .html test file to run.
