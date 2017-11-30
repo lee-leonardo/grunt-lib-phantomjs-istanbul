@@ -1,11 +1,3 @@
-/*
- * grunt-lib-phantomjs
- * http://gruntjs.com/
- *
- * Copyright (c) 2013 "Cowboy" Ben Alman, contributors
- * Licensed under the MIT license.
- */
-
 'use strict';
 
 module.exports = function(grunt) {
@@ -15,8 +7,7 @@ module.exports = function(grunt) {
     jshint: {
       all: [
         'Gruntfile.js',
-        'lib/*.js',
-        'phantomjs/main.js',
+        'src/*.js',
         'test/*.js'
       ],
       options: {
@@ -41,7 +32,7 @@ module.exports = function(grunt) {
           test: function test(msg) {
             test.actual = msg;
           },
-          phantomJSOptions: {
+          puppeteer: {
             inject: require('path').resolve('test/fixtures/inject.js')
           }
         }
@@ -54,7 +45,7 @@ module.exports = function(grunt) {
           test: function test(msg) {
             test.actual = msg;
           },
-          phantomJSOptions: {
+          puppeteer: {
             page: {
               customHeaders: {
                 'X-CUSTOM': 'custom_header_567'
@@ -71,7 +62,7 @@ module.exports = function(grunt) {
             if (!test.actual) { test.actual = []; }
             test.actual.push(a, b);
           },
-          phantomJSOptions: {
+          puppeteer: {
             page: {
               viewportSize: {
                 width: 1366,
@@ -87,41 +78,42 @@ module.exports = function(grunt) {
   // The most basic of tests. Not even remotely comprehensive.
   grunt.registerMultiTask('test', 'A test, of sorts.', function() {
     var options = this.options();
-    var phantomjs = require('./lib/phantomjs').init(grunt);
+    var url = require('fs').realpathSync(options.url);
+    var puppeteer = require('./src/puppeteer').init(grunt);
 
     // Load up and Instantiate the test server
     if (options.server) { require(options.server); }
 
     // Do something.
-    phantomjs.on('test', options.test);
+    puppeteer.on('test', options.test);
 
-    phantomjs.on('done', phantomjs.halt);
+    puppeteer.on('done', puppeteer.halt);
 
-    phantomjs.on('debug', function(msg) {
+    puppeteer.on('debug', function(msg) {
         grunt.log.writeln('debug:' + msg);
     });
 
-    // Built-in error handlers.
-    phantomjs.on('fail.load', function(url) {
-      phantomjs.halt();
-      grunt.verbose.write('Running PhantomJS...').or.write('...');
+    // // Built-in error handlers.
+    puppeteer.on('fail.load', function(url) {
+      puppeteer.halt();
+      grunt.verbose.write('Running Puppeteer...').or.write('...');
       grunt.log.error();
-      grunt.warn('PhantomJS unable to load "' + url + '" URI.');
+      grunt.warn('Puppeteer unable to load "' + url + '" URI.');
     });
 
-    phantomjs.on('fail.timeout', function() {
-      phantomjs.halt();
+    puppeteer.on('fail.timeout', function() {
+      puppeteer.halt();
       grunt.log.writeln();
-      grunt.warn('PhantomJS timed out.');
+      grunt.warn('Puppeteer timed out.');
     });
 
     // This task is async.
     var done = this.async();
 
-    // Spawn phantomjs
-    phantomjs.spawn(options.url, {
-      // Additional PhantomJS options.
-      options: options.phantomJSOptions,
+    // Spawn puppeteer
+    puppeteer.spawn(url, {
+      // Additional Puppeteer options.
+      options: options.puppeteer,
       // Complete the task when done.
       done: function(err) {
         if (err) { done(err); return; }
