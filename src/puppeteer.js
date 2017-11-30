@@ -121,7 +121,7 @@ exports.init = function (grunt) {
         // Update n so previously processed lines are ignored.
         n = lines.length;
         // Check back in a little bit.
-        id = setTimeout(loopy, 100);
+        id = setTimeout(pollingLoop, 100);
       }
     }());
 
@@ -144,7 +144,7 @@ exports.init = function (grunt) {
     // Keep -- Puppeteer args first, followed by grunt-specific args.
     args.push(
       // The main Puppeteer script file.
-      opts.puppeteerScript || asset('./main.js'),
+      opts.puppeteerScript || asset('./puppeteerHandle.js'),
       // The temporary file used for communications.
       tempfile.path,
       // URL or path to the page .html test file to run.
@@ -159,7 +159,7 @@ exports.init = function (grunt) {
     return puppeteerHandle = grunt.util.spawn({
       cmd: binPath,
       args: args
-    }, function (err, result, code) {
+    }, function doneFunction(err, result, code) {
       if (!err) {
         return;
       }
