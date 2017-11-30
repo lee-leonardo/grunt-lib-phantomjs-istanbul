@@ -20,11 +20,17 @@
       "url": "https://github.com/lee-leonardo/grunt-lib-puppeteer-istanbul/blob/master/LICENSE-MIT"
     }
   ],
+  "watch": {
+    "test": "{src,test,bin}/*.js",
+    "grunt-debug": "Gruntfile.js"
+  },
   "engines": {
     "node": ">= 7.6.0"
   },
   "scripts": {
+    "watch": "npm-watch",
     "test": "grunt jshint test",
+    "grunt-debug": "grunt jshint test --debug",
     "generateBin": "npm link"
   },
   "bin": {
@@ -32,7 +38,7 @@
   },
   "dependencies": {
     "eventemitter2": "^0.4.9",
-    "phantomjs-prebuilt": "^2.1.3",
+    "npm-watch": "^0.3.0",
     "puppeteer": "^0.13.0",
     "semver": "^4.3.0",
     "temporary": "^0.0.8"
@@ -42,7 +48,7 @@
     "express": "^4.11.2",
     "grunt": "^0.4.5",
     "grunt-cli": "^0.1.13",
-    "grunt-contrib-jshint": "^0.11.3"
+    "grunt-contrib-jshint": "^1.1.0"
   },
   "main": "src/puppeteer",
   "files": [
