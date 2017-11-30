@@ -1,5 +1,3 @@
-// const harness = require('./qunit-harness');
-
 function launchOptions(puppeteerOptions) {
   const defaults = {
     headless: true,   // the default
