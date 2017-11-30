@@ -1,7 +1,5 @@
 #! /usr/bin/env node
 
-console.log("console log output");
-
 const path = require('path');
 const puppeteer = require('puppeteer');
 const setup = require('./puppeteer-setup');
@@ -14,15 +12,16 @@ if (args.length < 1 || args.length > 4) {
 }
 
 const [
-  handleScript,
-  tempFilePath,
-  pageUrl,
-  options
+  handleScript, // defaults to src/qunit-harness.js
+  tempFilePath, // the file that is used for communication
+  pageUrl,      // test page url path
+  options       // puppeteer options
 ] = args;
+const launchOptions = setup.launchOptions(options.puppeteer);
 
-(async() => {
-  // const browser = await puppeteer.launch(setup.launchOptions(options.puppeteer));
-  const browser = await puppeteer.launch();
+puppeteer
+.launch(launchOptions)
+.then(async browser => {
   const page = await browser.newPage();
 
   //TODO - use the handleScript
@@ -30,13 +29,34 @@ const [
 
   // Attach to browser console log events, and log to node console
   await page.on('console', (...params) => {
-    for (let i = 0; i < params.length; ++i)
-      console.log(`${params[i]}`);
+    for (let i = 0; i < params.length; ++i) {
+      console.log(`${params[i].text}`);
+    }
+      //Logs everything here indiscriminately, , the params object is constructed as such:
+      /*
+        ConsoleMessage(
+          type: 'log' | 'error' | etc,
+          text: 'the outpur of the console message'
+          args: 'a list of the arguments'
+        )
+      */
   });
 
   var moduleErrors = [];
   var testErrors = [];
   var assertionErrors = [];
+
+  await page.on('error', err => {
+    console.error(err);
+    console.error(err.stack);
+  });
+
+  await page.on('exit', function (code) {
+    // Wait few ms for error to be printed.
+    setTimeout(function () {
+      process.exit(code)
+    }, 20)
+  });
 
   await page.exposeFunction('harness_moduleDone', context => {
     if (context.failed) {
@@ -137,51 +157,8 @@ const [
   console.error("Tests timed out");
   browser.close();
   process.exit(124);
-})().catch((error) => {
+})
+.catch((error) => {
   console.error(error);
   process.exit(1);
 });
-
-
-
-
-
-
-
-
-
-
-//TODO - the stuff from before, i.e. cannibalize
-
-
-// //TODO - phantomjs
-// var path = require('path')
-// var spawn = require('child_process').spawn
-
-// var binPath = require(path.join(__dirname, '..', 'lib', 'phantomjs')).path
-
-// var args = process.argv.slice(2)
-
-// // For Node 0.6 compatibility, pipe the streams manually, instead of using
-// // `{ stdio: 'inherit' }`.
-// var cp = spawn(binPath, args)
-// cp.stdout.pipe(process.stdout)
-// cp.stderr.pipe(process.stderr)
-// process.stdin.pipe(cp.stdin)
-
-// cp.on('error', function (err) {
-//   console.error('Error executing phantom at', binPath)
-//   console.error(err.stack)
-// })
-
-// cp.on('exit', function (code) {
-//   // Wait few ms for error to be printed.
-//   setTimeout(function () {
-//     process.exit(code)
-//   }, 20)
-// });
-
-// process.on('SIGTERM', function () {
-//   cp.kill('SIGTERM')
-//   process.exit(1)
-// })
