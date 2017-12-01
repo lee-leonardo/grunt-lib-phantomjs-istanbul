@@ -6,7 +6,6 @@ exports.init = function (grunt) {
   var fs = require('fs');
 
   // External libs.
-  var semver = require('semver');
   var Tempfile = require('temporary').File;
   var EventEmitter2 = require('eventemitter2').EventEmitter2;
 
@@ -67,25 +66,6 @@ exports.init = function (grunt) {
       setTimeout(kill, options.killTimeout);
     };
 
-    // Internal methods.
-    var privates = {
-      // Abort if Puppeteer version isn't adequate.
-      version: function (version) {
-        var current = [version.major, version.minor, version.patch].join('.');
-        var required = '>= 1.6.0';
-        if (!semver.satisfies(current, required)) {
-          exports.halt();
-          grunt.log.writeln();
-          grunt.log.errorlns(
-            'In order for this task to work properly, Puppeteer version ' +
-            required + ' must be installed, but version ' + current +
-            ' was detected.'
-          );
-          grunt.warn('The correct version of Puppeteer needs to be installed.', 127);
-        }
-      }
-    };
-
     (function pollingLoop() {
       // Disable logging temporarily.
       grunt.log.muted = true;
@@ -100,14 +80,9 @@ exports.init = function (grunt) {
         var eventName = args[0];
         // Debugging messages.
         grunt.log.debug(JSON.stringify(['puppeteer'].concat(args)).magenta);
-        if (eventName === 'private') {
-          // If a private (internal) message is passed, execute the
-          // corresponding method.
-          privates[args[1]].apply(null, args.slice(2));
-        } else {
-          // Otherwise, emit the event with its arguments.
-          exports.emit.apply(exports, args);
-        }
+        // Otherwise, emit the event with its arguments.
+        exports.emit.apply(exports, args);
+
         // If halted, return true. Because the Array#some method was used,
         // this not only sets "done" to true, but stops further iteration
         // from occurring.
