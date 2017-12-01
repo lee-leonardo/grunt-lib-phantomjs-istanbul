@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 
+const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const setup = require('./puppeteer-setup');
@@ -15,22 +16,36 @@ const [
   handleScript, // defaults to src/qunit-harness.js
   tempFilePath, // the file that is used for communication
   pageUrl,      // test page url path
-  options       // puppeteer options
+  opts       // puppeteer options
 ] = args;
+const tempFile = path.resolve(tempFilePath);
+const options = JSON.parse(opts || {});
 const launchOptions = setup.launchOptions(options.puppeteer);
+const viewportOptions = setup.viewPortOptions(options.viewport);
 
 puppeteer
 .launch(launchOptions)
 .then(async browser => {
   const page = await browser.newPage();
+  page.setViewport(viewportOptions);
 
-  //TODO - use the handleScript
-  // await setup.harness(page);
+  // Basic function to  write to the tmpfile that grunt polls against to pick up changes.
+  var sendMessage = function(arg) {
+    var args = Array.isArray(arg) ? arg : [].slice.call(arguments);
+    fs.write(tempFile, JSON.stringify(args) + '\n', 'a');
+  };
+
+  //TODO need to ensure that this is working properly
+  // This injects the script tags to the page prior to it this is injected into the frame,
+  var scripts = Array.isArray(options.inject) ? options.inject : [options.inject];
+  sendMessage('inject', options.inject);
+  await scripts.forEach(async script => page.addScriptTag(script)); // TODO need to test if this works...
 
   // Attach to browser console log events, and log to node console
   await page.on('console', (...params) => {
     for (let i = 0; i < params.length; ++i) {
       console.log(`${params[i].text}`);
+      sendMessage('console', params[i]); //TODO should I only log 'log' level
     }
       //Logs everything here indiscriminately, , the params object is constructed as such:
       /*
@@ -49,13 +64,28 @@ puppeteer
   await page.on('error', err => {
     console.error(err);
     console.error(err.stack);
+    sendMessage('error.onError', err, err.stack, "node error"); // this logs an error thrown by node.
   });
 
-  await page.on('exit', function (code) {
-    // Wait few ms for error to be printed.
-    setTimeout(function () {
-      process.exit(code)
-    }, 20)
+  await page.on('pageerror', err => {
+    sendMessage('error.onError', err);
+  });
+
+  await page.on('request', req => {
+    sendMessage('requestIssued', req);
+    //TODO - this is a really messy bit of code... will have to determine the best solution at a later point.
+  });
+
+  await page.on('requestfailed', req => {
+    sendMessage('resourceFailed', req);
+  });
+
+  await page.on('requestfinished', req => {
+    sendMessage('resourceFinished', req);
+  });
+
+  await page.on('response', res => {
+    sendMessage('responseReceived', res);
   });
 
   await page.exposeFunction('harness_moduleDone', context => {
@@ -72,8 +102,10 @@ puppeteer
       testErrors.push(msg);
       assertionErrors = [];
       process.stdout.write("F");
+      sendMessage('F');
     } else {
       process.stdout.write(".");
+      sendMessage('.');
     }
   });
 
@@ -92,6 +124,7 @@ puppeteer
     }
 
     assertionErrors.push(msg);
+    sendMessage(msg);
   });
 
   await page.exposeFunction('harness_done', context => {
