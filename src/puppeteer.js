@@ -30,7 +30,32 @@ exports.init = function (grunt) {
 
   exports.spawn = function (pageUrl, options) {
     // Create temporary file to be used for grunt-puppeteer communication.
-    var tempfile = new Tempfile();
+    var tempfile = tmp.fileSync();
+    console.log(tempfile);
+    console.log(pageUrl);
+
+    //TODO
+
+    // var a = fs.readSync(tempfile.fd, "utf8");
+    // console.log(a);
+
+    // var b = fs.readSync(tempfile.fd, { encoding: "buffer" });
+    // console.log(b);
+
+
+    //TODO figure out a way to create a readable stream! Something that listens to evnts and etc.
+
+
+
+
+
+    // await tmp.file((err, path, fs, cleanCb) => {
+    //   console.log(err);
+    //   console.log(path);
+    //   console.log(fs);
+    // });
+
+
     // Timeout ID.
     var id;
     // The number of tempfile lines already read.
@@ -48,7 +73,7 @@ exports.init = function (grunt) {
     // All done? Clean up!
     var cleanup = function (done, immediate) {
       clearTimeout(id);
-      tempfile.unlink();
+      tempfile.removeCallback(); // clean up for safety, not needed
       var kill = function () {
         // Only kill process if it has a pid, otherwise an error would be thrown.
         if (puppeteerHandle.pid) {
@@ -118,10 +143,8 @@ exports.init = function (grunt) {
 
     // Keep -- Puppeteer args first, followed by grunt-specific args.
     args.push(
-      // The main Puppeteer script file.
-      opts.puppeteerScript || asset('./puppeteerHandle.js'),
-      // The temporary file used for communications.
-      tempfile.path,
+      // The temporary file used for communications. fs.write requires the file descriptor rather than the file path
+      tempfile.fd,
       // URL or path to the page .html test file to run.
       pageUrl,
       // Additional Puppeteer options.
