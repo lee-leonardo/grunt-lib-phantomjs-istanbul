@@ -38,10 +38,11 @@
   },
   "dependencies": {
     "eventemitter2": "^0.4.9",
+    "node-ipc": "^9.1.1",
     "npm-watch": "^0.3.0",
     "puppeteer": "^0.13.0",
     "semver": "^4.3.0",
-    "temporary": "^0.0.8"
+    "tmp": "0.0.33"
   },
   "devDependencies": {
     "difflet": "^0.2.3",
