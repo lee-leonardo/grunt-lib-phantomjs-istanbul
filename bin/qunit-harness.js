@@ -115,21 +115,33 @@ async function setupExposedMethods(page, sendMessage, moduleErrors, testErrors, 
   });
 }
 
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function connectHarnessToQunits() {
+  QUnit.config.testTimeout = 10000;
+
+  // Cannot pass the window.harness_blah methods directly, because they are
+  // automatically defined as async methods, which QUnit does not support
+  QUnit.moduleDone((context) => {
+    window.harness_moduleDone(context);
+  });
+  QUnit.testDone((context) => {
+    window.harness_testDone(context);
+  });
+  QUnit.log((context) => {
+    window.harness_log(context);
+  });
+  QUnit.done((context) => {
+    window.harness_done(context);
+  });
+
+  console.log("\nRunning: " + JSON.stringify(QUnit.urlParams) + "\n");
 }
 
-// returns a page promise
-async function harness(page, msgFn) {
-
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports = {
   setupPageEvents: setupPageEvents,
   setupExposedMethods: setupExposedMethods,
-  init: function init(pageOptions, msgFn) {
-    return {
-      harness: harness
-    }
-  }
+  connectHarnessToQunits: connectHarnessToQunits
 }

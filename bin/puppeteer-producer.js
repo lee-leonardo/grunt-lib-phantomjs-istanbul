@@ -46,37 +46,26 @@ ipc.serve(() => {
         sendMessage('inject', options.inject);
         await scripts.forEach(async script => page.addScriptTag(script)); // TODO need to test if this works...
 
-
-        //This abstracts out the event handling syntax to try to make this more extensible in the future... lets see if this works.
+        // set up page to handle puppeteer issues.
         await harness.setupPageEvents(page, sendMessage);
 
+        //
         var moduleErrors = [];
         var testErrors = [];
         var assertionErrors = [];
         await harness.setupExposedMethods(page, sendMessage, moduleErrors, testErrors, assertionErrors);
 
+        /*
+          Structure:
+          1. Setup Harness
+          2. Evaluation
+          3. Clean up
+        */
+        //TODO maybe move this into a new promise, one that has the context of the page and the browser for clean up
         await page.goto("file://" + pageUrl);
 
-        await page.evaluate(() => {
-          QUnit.config.testTimeout = 10000;
-
-          // Cannot pass the window.harness_blah methods directly, because they are
-          // automatically defined as async methods, which QUnit does not support
-          QUnit.moduleDone((context) => {
-            window.harness_moduleDone(context);
-          });
-          QUnit.testDone((context) => {
-            window.harness_testDone(context);
-          });
-          QUnit.log((context) => {
-            window.harness_log(context);
-          });
-          QUnit.done((context) => {
-            window.harness_done(context);
-          });
-
-          console.log("\nRunning: " + JSON.stringify(QUnit.urlParams) + "\n");
-        });
+        // The harness cannot be passed directly to the QUnit framework due to Qunits not support async operations.
+        await page.evaluate(harness.connectHarnessToQunits);
 
         function wait(ms) {
           return new Promise(resolve => setTimeout(resolve, ms));
@@ -84,7 +73,7 @@ ipc.serve(() => {
         await wait(timeout);
 
         console.error("Tests timed out");
-        browser.close();
+        await browser.close();
       })
       .catch((error) => {
         ipc.serve.emit(socket, "error".error, error);
