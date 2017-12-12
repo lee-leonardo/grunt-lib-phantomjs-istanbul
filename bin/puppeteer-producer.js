@@ -22,68 +22,153 @@ ipc.config.retry = 1500;
 ipc.config.maxConnections = 1;
 
 ipc.serve(() => {
-  ipc.server.on('testPage', (data, socket) => {
-    // var pageUrl = data.pageUrl;
-    var pageUrl = "//Users/leolee/EWEGithub/epc-roomsandrates-web/src/static-content-test/scripts/ratesAndAvail/inventoryItemView_qunit.html";
-
+  ipc.server.on('test.page', (data, socket) => {
     puppeteer
-      .launch(launchOptions)
+      .launch({
+        headless: true,
+        timeout: 10000,
+        dumpio: true
+      })
+      // Setup
       .then(async browser => {
         const page = await browser.newPage();
-        page.setViewport(viewportOptions);
-
-        // Basic function to  write to the tmpfile that grunt polls against to pick up changes.
-        var sendMessage = function (arg) {
-          var args = Array.isArray(arg) ? arg : [].slice.call(arguments);
-          ipc.server.emit(socket, 'results', JSON.stringify(args));
-        };
-        //TODO - need to work on making this a bit more succinct... move this code to another file?
-
-
-        //TODO need to ensure that this is working properly
-        // This injects the script tags to the page prior to it this is injected into the frame,
-        var scripts = Array.isArray(options.inject) ? options.inject : [options.inject];
-        sendMessage('inject', options.inject);
-        await scripts.forEach(async script => page.addScriptTag(script)); // TODO need to test if this works...
-
-        // set up page to handle puppeteer issues.
-        await harness.setupPageEvents(page, sendMessage);
-
-        //
         var moduleErrors = [];
         var testErrors = [];
         var assertionErrors = [];
-        await harness.setupExposedMethods(page, sendMessage, moduleErrors, testErrors, assertionErrors);
 
-        /*
-          Structure:
-          1. Setup Harness
-          2. Evaluation
-          3. Clean up
-        */
-        //TODO maybe move this into a new promise, one that has the context of the page and the browser for clean up
-        await page.goto("file://" + pageUrl);
+        //setup code
+        function message(msg) {
+          //ipc.log(msg);
+          // console.log(msg);
+          ipc.server.emit(socket, 'result', {
+            data: msg
+          });
+        }
 
-        // The harness cannot be passed directly to the QUnit framework due to Qunits not support async operations.
-        await page.evaluate(harness.connectHarnessToQunits);
+        await page.on('console', (...params) => {
+          for (let i = 0; i < params.length; ++i)
+            console.log(`${params[i]}`);
+        });
+
+        var moduleErrors = [];
+        var testErrors = [];
+        var assertionErrors = [];
+
+        await page.exposeFunction('harness_moduleDone', context => {
+          if (context.failed) {
+            var msg = "Module Failed: " + context.name + "\n" + testErrors.join("\n");
+            moduleErrors.push(msg);
+            testErrors = [];
+          }
+        });
+
+        await page.exposeFunction('harness_testDone', context => {
+          if (context.failed) {
+            var msg = "  Test Failed: " + context.name + assertionErrors.join("    ");
+            testErrors.push(msg);
+            assertionErrors = [];
+            message("F");
+            // process.stdout.write("F");
+          } else {
+            message(".");
+            // process.stdout.write(".");
+          }
+        });
+
+        await page.exposeFunction('harness_log', context => {
+          if (context.result) {
+            return;
+          } // If success don't log
+
+          var msg = "\n    Assertion Failed:";
+          if (context.message) {
+            msg += " " + context.message;
+          }
+
+          if (context.expected) {
+            msg += "\n      Expected: " + context.expected + ", Actual: " + context.actual;
+          }
+
+          assertionErrors.push(msg);
+        });
+
+        await page.exposeFunction('harness_done', context => {
+          console.log("\n");
+
+          if (moduleErrors.length > 0) {
+            for (var idx = 0; idx < moduleErrors.length; idx++) {
+              console.error(moduleErrors[idx] + "\n");
+            }
+          }
+
+          var stats = [
+            "Time: " + context.runtime + "ms",
+            "Total: " + context.total,
+            "Passed: " + context.passed,
+            "Failed: " + context.failed
+          ];
+          console.log(stats.join(", "));
+
+          browser.close();
+          if (context.failed > 0) {
+            ipc.server.emit(socket, 'finish', {
+              data: {
+                successful: false
+              }
+            });
+          } else {
+            ipc.server.emit(socket, 'finish', {
+              data: {
+                successful: true
+              }
+            });
+          }
+        });
+
+        await page.goto('file://' + data.url);
+
+        await page.evaluate(() => {
+          QUnit.config.testTimeout = 10000;
+
+          // Cannot pass the window.harness_blah methods directly, because they are
+          // automatically defined as async methods, which QUnit does not support
+          QUnit.moduleDone((context) => {
+            window.harness_moduleDone(context);
+          });
+          QUnit.testDone((context) => {
+            window.harness_testDone(context);
+          });
+          QUnit.log((context) => {
+            window.harness_log(context);
+          });
+          QUnit.done((context) => {
+            window.harness_done(context);
+          });
+
+          console.log("\nRunning: " + JSON.stringify(QUnit.urlParams) + "\n");
+        });
 
         function wait(ms) {
           return new Promise(resolve => setTimeout(resolve, ms));
         }
-        await wait(timeout);
+        await wait(ipc.config.retry);
 
         console.error("Tests timed out");
-        await browser.close();
+        browser.close();
+        ipc.server.emit(socket, 'finish', {
+          data: {
+            successful: moduleErrors.length === 0 && testErrors.length === 0 && assertionErrors.length === 0
+          }
+        });
       })
-      .catch((error) => {
-        ipc.serve.emit(socket, "error".error, error);
-
-        console.error(error);
+      .catch(err => {
+        ipc.server.emit(socket, 'error', err);
+        process.exit(1);
       });
-
   });
   ipc.server.on('socket.disconnected', (data, socket) => {
-    console.log("DISCONNECTED\n\n", arguments);
+    ipc.log("DISCONNECTED\n\n");
+    //ipc.log(data);
     ipc.server.stop();
     process.exit(0);
   });
