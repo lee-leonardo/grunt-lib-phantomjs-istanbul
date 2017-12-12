@@ -23,32 +23,34 @@ ipc.config.maxConnections = 1;
 
 ipc.serve(() => {
   ipc.server.on('test.page', (data, socket) => {
+    ipc.log("received data: ".log, data);
+
     puppeteer
-      .launch({
-        headless: true,
-        timeout: 10000,
-        dumpio: true
-      })
-      // Setup
+      .launch(launchOptions)
       .then(async browser => {
         const page = await browser.newPage();
         var moduleErrors = [];
         var testErrors = [];
         var assertionErrors = [];
 
-        //setup code
-        function message(msg) {
-          //ipc.log(msg);
-          // console.log(msg);
-          ipc.server.emit(socket, 'result', {
-            data: msg
-          });
-        }
-
-        await page.on('console', (...params) => {
-          for (let i = 0; i < params.length; ++i)
-            console.log(`${params[i]}`);
-        });
+        await page.on('console', puppeteerConsole({
+          log: {
+            handler: (consoleMessage, options) => {
+              console.log(consoleMessage.text);
+              ipc.server.emit(socket, 'puppeteer.log', {
+                data: consoleMessage.text
+              });
+            }
+          },
+          error: {
+            handler: (consoleMessage, options) => {
+              console.error(consoleMessage.text);
+              ipc.server.emit(socket, 'puppeteer.error', {
+                error: consoleMessage.text
+              });
+            }
+          }
+        }));
 
         var moduleErrors = [];
         var testErrors = [];
@@ -65,13 +67,10 @@ ipc.serve(() => {
         await page.exposeFunction('harness_testDone', context => {
           if (context.failed) {
             var msg = "  Test Failed: " + context.name + assertionErrors.join("    ");
-            testErrors.push(msg);
+            testErrors.push(msg + "F");
             assertionErrors = [];
-            message("F");
-            // process.stdout.write("F");
           } else {
-            message(".");
-            // process.stdout.write(".");
+            //TODO
           }
         });
 
@@ -110,19 +109,14 @@ ipc.serve(() => {
           console.log(stats.join(", "));
 
           browser.close();
-          if (context.failed > 0) {
-            ipc.server.emit(socket, 'finish', {
-              data: {
-                successful: false
-              }
-            });
-          } else {
-            ipc.server.emit(socket, 'finish', {
-              data: {
-                successful: true
-              }
-            });
-          }
+
+          const success = context.failed == 0;
+          ipc.server.emit(socket, 'done', {
+            data: {
+              successful: success
+            }
+          });
+          process.exit(success ? 0 : 1);
         });
 
         await page.goto('file://' + data.url);
@@ -155,11 +149,6 @@ ipc.serve(() => {
 
         console.error("Tests timed out");
         browser.close();
-        ipc.server.emit(socket, 'finish', {
-          data: {
-            successful: moduleErrors.length === 0 && testErrors.length === 0 && assertionErrors.length === 0
-          }
-        });
       })
       .catch(err => {
         ipc.server.emit(socket, 'error', err);
@@ -168,7 +157,6 @@ ipc.serve(() => {
   });
   ipc.server.on('socket.disconnected', (data, socket) => {
     ipc.log("DISCONNECTED\n\n");
-    //ipc.log(data);
     ipc.server.stop();
     process.exit(0);
   });
