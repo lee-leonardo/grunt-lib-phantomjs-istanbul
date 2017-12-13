@@ -4,21 +4,20 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const setup = require('./puppeteer-setup');
+const args = require('puppeteer-args').argv(process.argv, 3);
 
-const args = process.argv.slice(2);
-
-if (args.length < 1 || args.length > 4) {
+if (!args) {
   console.log("Usage: node run-qunit-chrome.js <URL> <timeout>");
   process.exit(1);
 }
 
 const [
-  handleScript, // defaults to src/qunit-harness.js
-  tempFilePath, // the file that is used for communication
+  // tempFilePath, // the file that is used for communication
+  tempFileDir,
   pageUrl,      // test page url path
   opts       // puppeteer options
 ] = args;
-const tempFile = path.resolve(tempFilePath);
+// const tempFile = path.resolve(tempFilePath);
 const options = JSON.parse(opts || {});
 const launchOptions = setup.launchOptions(options.puppeteer);
 const viewportOptions = setup.viewPortOptions(options.viewport);
