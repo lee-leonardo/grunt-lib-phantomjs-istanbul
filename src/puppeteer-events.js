@@ -28,7 +28,7 @@ module.exports.init = class PuppeteerEventListener {
         console.log(res.error);
       });
       // Error from puppeteer or ipc
-      ipc.of.producer.on('error', (error) => {
+      ipc.of.producer.on('error', error => {
         ipc.log('error: ', error);
         ipc.log('stack: ', error.stack);
       });
@@ -40,6 +40,7 @@ module.exports.init = class PuppeteerEventListener {
 
         process.exit(0);
       });
+      // This line will only happen if there is a issue on the producers end.
       ipc.of.producer.on('disconnect', () => {
         ipc.log("disconnected from connection with puppeteer-sock".notice);
       });
