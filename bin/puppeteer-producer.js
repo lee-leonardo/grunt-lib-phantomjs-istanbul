@@ -3,7 +3,6 @@ const puppeteer = require('puppeteer');
 
 const setup = require('./puppeteer-setup');
 const args = require('./puppeteer-args').argv(process.argv, 1);
-const harness = require('./qunit-harness');
 
 if (!args) {
   console.log("Usage: node run-qunit-chrome.js options");
@@ -28,12 +27,8 @@ ipc.serve(() => {
     puppeteer
       .launch(launchOptions)
       .then(async browser => {
-        const page = await browser.newPage();
-        var moduleErrors = [];
-        var testErrors = [];
-        var assertionErrors = [];
-
-        await page.on('console', puppeteerConsole({
+        // Configuring logger
+        const consoleOptions = setup.consoleOptions({
           log: {
             handler: (consoleMessage, options) => {
               console.log(consoleMessage.text);
@@ -50,7 +45,15 @@ ipc.serve(() => {
               });
             }
           }
-        }));
+        }, options.console);
+
+        // Setup
+        const page = await browser.newPage();
+        var moduleErrors = [];
+        var testErrors = [];
+        var assertionErrors = [];
+
+        await page.on('console', setup.generateLogger(consoleOptions));
 
         var moduleErrors = [];
         var testErrors = [];

@@ -1,22 +1,56 @@
-function launchOptions(launcherOptions) {
-  const defaults = {
-    headless: true,   // the default
-    timeout: 10000,   // the original default is 30,000 i.e. 30 seconds
-    dumpio: true,     // allows for grunt to 'talk to it'
-  };
+const {
+  launch,
+  viewport,
+  consoleOpt
+} = require('./puppeteer-defaults');
 
-  return Object.assign(defaults, launcherOptions);
+function launchOptions(...launcherOptions) {
+  return Object.assign(launch, ...launcherOptions);
 };
 
-function viewPortOptions(viewportOptions) {
-  const defaults = {
+function viewPortOptions(...viewportOptions) {
+  return Object.assign(viewport, ...viewportOptions);
+}
 
-  };
+function consoleOptions(...consoleOptions) {
+  return Object.assign(consoleOpt, ...consoleOptions)
+}
 
-  return Object.assign(defaults, viewportOptions);
+function generateLogger(settings) {
+  return (...params) => {
+    for (let i = 0; i < params.length; i++) {
+      //Puppeteer ConsoleMessage object: https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-consolemessage
+      const {
+        type
+      } = params[i];
+
+      // Handle traces in a different way but allow the trace functionality to be overridden, defaults
+      if (settings[type]) {
+        const {
+          handler,
+          options = settings.defaults.options
+        } = settings[type];
+
+        handler(params[i], options);
+      } else {
+        const {
+          handler,
+          options
+        } = settings.defaults
+
+        handler(params[i], options);
+      }
+    }
+  }
 }
 
 module.exports = {
+  initFromArgv: function (argv) {
+    //argv
+    JSON.parse(cliOptString || {});
+  },
   launchOptions: launchOptions,
-  viewPortOptions: viewPortOptions
+  viewPortOptions: viewPortOptions,
+  consoleOptions: consoleOptions,
+  generateLogger: generateLogger
 };
