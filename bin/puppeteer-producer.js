@@ -124,6 +124,13 @@ ipc.serve(() => {
 
         await page.goto('file://' + data.url);
 
+        if (options.injectScript) {
+          //TODO determine if one truly needs to await here...
+          page.addScriptTag({
+            content: options.injectScript
+          });
+        }
+
         await page.evaluate(() => {
           QUnit.config.testTimeout = 10000;
 

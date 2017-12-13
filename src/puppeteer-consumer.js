@@ -3,9 +3,10 @@ ipc.config.id = 'consumer';
 ipc.config.retry = 1500;
 ipc.config.maxConnections = 1;
 
+//TODO this is test data...
 var json = {
   url: "/Users/leolee/EWEGithub/epc-roomsandrates-web/src/static-content-test/scripts/ratesAndAvail/inventoryItemView_qunit.html"
-}
+};
 
 ipc.connectTo('producer', () => {
   ipc.of.producer.on('connect', () => {
