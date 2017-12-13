@@ -13,12 +13,15 @@ ipc.connectTo('producer', () => {
     console.log('established connection with puppeteer-sock'.rainbow);
     ipc.of.producer.emit('test.page', json);
   });
-  ipc.of.producer.on('puppeteer.log', res => {
+  //Error from qunit
+  ipc.of.producer.on('qunit.log', res => {
     console.log(res.data);
   });
-  ipc.of.producer.on('puppeteer.error', res => {
+  //Error from qunit
+  ipc.of.producer.on('qunit.error', res => {
     console.log(res.error);
   });
+  // Error from puppeteer or ipc
   ipc.of.producer.on('error', (error) => {
     ipc.log('error: ', error);
     ipc.log('stack: ', error.stack);

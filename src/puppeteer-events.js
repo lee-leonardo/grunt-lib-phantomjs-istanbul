@@ -1,3 +1,19 @@
+/*
+  Steps:
+  1. setup the event emitter syntax (using node events rather than 3rd party) and harmonize it with puppeteer consumer
+     - create two spawn calls, one for the producer, one for the consumer.
+  2. ensure failures are being signaled correctly
+  3. events:
+      - log event, to log all the rudimentary logs
+      - log the done handler to determine if test succeed or fail.
+  4. publish and integrate into the two levels of plugins.
+  5. Post work:
+     - add verbose logging support for debugging.
+     - add code to allow for scripting logging and other things.
+     - move out puppeteer code into it's own repository.
+     - create monitoring logic so that tests can be run in parallel
+*/
+
 const EventEmitter = require('events');
 
 const ipc = require('node-ipc');

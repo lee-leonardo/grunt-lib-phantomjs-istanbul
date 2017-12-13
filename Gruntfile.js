@@ -1,5 +1,7 @@
 'use strict';
 
+global.__basedir = __dirname;
+
 module.exports = function(grunt) {
 
   // Project configuration.
@@ -77,13 +79,37 @@ module.exports = function(grunt) {
 
   // The most basic of tests. Not even remotely comprehensive.
   grunt.registerMultiTask('test', 'A test, of sorts.', function() {
+    /*
+      Sequence of Events:
+      1. spawn thread of producer
+      2. spawn thread of consumer, this handles the async call.
+      3. consumer connects to producer
+      4. consumer sends path to qunit html file to producer
+      5. producer navigates to the page and evaluates it, sending log and utlimately the successs status
+      6. producer notifies the consumer when it is finished, consumer disconnects.
+      7. consumer kills itself resolving it's async call
+      8. producer kills itself when there are no consumers left
+      9. resolve grunt job with the success status determining success of failure.
+    */
+    /*
+      grunt
+        task
+          producer (or producer monitor with internal queue with hashes for each consumer thread)
+          consumer threads (if using monitor, there are many consumer threads)
+    */
+
+
+
     var options = this.options();
     var url = require('fs').realpathSync(options.url);
+
+    //TODO is this the syntax we desire? Fluent as it maybe, it seems like it could improve.
     var puppeteer = require('./src/puppeteer').init(grunt);
 
     // Load up and Instantiate the test server
     if (options.server) { require(options.server); }
 
+    //TODO this needs to be updated
     // Do something.
     puppeteer.on('test', options.test);
 
@@ -106,6 +132,7 @@ module.exports = function(grunt) {
       grunt.log.writeln();
       grunt.warn('Puppeteer timed out.');
     });
+    //TODO 
 
     // This task is async.
     var done = this.async();

@@ -32,7 +32,7 @@ ipc.serve(() => {
           log: {
             handler: (consoleMessage, options) => {
               console.log(consoleMessage.text);
-              ipc.server.emit(socket, 'puppeteer.log', {
+              ipc.server.emit(socket, 'qunit.log', {
                 data: consoleMessage.text
               });
             }
@@ -40,7 +40,7 @@ ipc.serve(() => {
           error: {
             handler: (consoleMessage, options) => {
               console.error(consoleMessage.text);
-              ipc.server.emit(socket, 'puppeteer.error', {
+              ipc.server.emit(socket, 'qunit.error', {
                 error: consoleMessage.text
               });
             }
@@ -115,9 +115,7 @@ ipc.serve(() => {
 
           const success = context.failed == 0;
           ipc.server.emit(socket, 'done', {
-            data: {
-              successful: success
-            }
+            successful: success
           });
           process.exit(success ? 0 : 1);
         });
