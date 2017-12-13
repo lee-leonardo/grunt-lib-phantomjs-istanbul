@@ -1,12 +1,30 @@
 'use strict';
 
+/*
+  Steps:
+  1. setup the event emitter syntax and harmonize it with puppeteer consumer
+     - create two spawn calls, one for the producer, one for the consumer.
+  2. ensure failures are being signaled correctly
+  3. events:
+      - log event, to log all the rudimentary logs
+      - log the done handler to determine if test succeed or fail.
+  4. publish and integrate into the two levels of plugins.
+  5. Post work:
+     - add verbose logging support for debugging.
+     - add code to allow for scripting logging and other things.
+     - move out puppeteer code into it's own repository.
+     - create monitoring logic so that tests can be run in parallel
+*/
+
 exports.init = function (grunt) {
   // Nodejs libs.
   var path = require('path');
   var fs = require('fs');
 
+  //TODO spawn producer process with the requisite information.
+  //TODO setup the consumer and listen on event
+
   // External libs.
-  var Tempfile = require('temporary').File;
   var EventEmitter2 = require('eventemitter2').EventEmitter2;
 
   // Get path to Puppeteer binary
@@ -30,8 +48,6 @@ exports.init = function (grunt) {
 
   exports.spawn = function (pageUrl, options) {
     // Create temporary file to be used for grunt-puppeteer communication.
-    var tempfile = tmp.fileSync();
-    console.log(tempfile);
     console.log(pageUrl);
 
     //TODO
@@ -73,7 +89,19 @@ exports.init = function (grunt) {
     // All done? Clean up!
     var cleanup = function (done, immediate) {
       clearTimeout(id);
-      tempfile.removeCallback(); // clean up for safety, not needed
+
+
+
+
+
+
+
+      // TODO clean up, by killing ish.
+
+
+
+
+
       var kill = function () {
         // Only kill process if it has a pid, otherwise an error would be thrown.
         if (puppeteerHandle.pid) {
@@ -95,7 +123,20 @@ exports.init = function (grunt) {
       // Disable logging temporarily.
       grunt.log.muted = true;
       // Read the file, splitting lines on \n, and removing a trailing line.
-      var lines = grunt.file.read(tempfile.path).split('\n').slice(0, -1);
+
+
+
+
+
+
+      //TODO instead of reading a file, capture the output from puppeteer
+      // var lines = grunt.file.read(tempfile.path).split('\n').slice(0, -1);
+
+
+
+
+
+
       // Re-enable logging.
       grunt.log.muted = false;
       // Iterate over all lines that haven't already been processed.
@@ -144,7 +185,6 @@ exports.init = function (grunt) {
     // Keep -- Puppeteer args first, followed by grunt-specific args.
     args.push(
       // The temporary file used for communications. fs.write requires the file descriptor rather than the file path
-      tempfile.fd,
       // URL or path to the page .html test file to run.
       pageUrl,
       // Additional Puppeteer options.
