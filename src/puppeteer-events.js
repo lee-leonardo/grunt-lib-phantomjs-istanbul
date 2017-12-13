@@ -6,7 +6,11 @@ ipc.config.retry = 1500;
 ipc.config.maxConnections = 1;
 
 module.exports.init = class PuppeteerEventListener {
-  constructor({ grunt,  options, resolveCallback }) {
+  constructor({
+    grunt,
+    options,
+    resolveCallback
+  }) {
     this.resolve = resolveCb; // thread is kept awake until this resolves. -> TODO kill this code when timeout is reached.
     this.emitter = new EventEmitter();
 
