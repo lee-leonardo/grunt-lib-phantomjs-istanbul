@@ -16,6 +16,8 @@
 const EventEmitter = require('events');
 const ipc = require('node-ipc');
 
+const producer = require('puppeteer-producer');
+
 /*
   TODO
    - to allow this to be concurrent this id needs to be unique (i.e. add the __filename to the id!)
@@ -44,6 +46,9 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
   }
 
   spawn() {
+    // TODO queue up the producer to fire
+    // TODO: grunt.util.spawn
+
     ipc.connectTo('producer', () => {
       ipc.of.producer.on('connect', () => {
         console.log('established connection with puppeteer-sock'.rainbow);
