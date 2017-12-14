@@ -97,14 +97,16 @@ module.exports = function(grunt) {
           producer (or producer monitor with internal queue with hashes for each consumer thread)
           consumer threads (if using monitor, there are many consumer threads)
     */
-
-
-
     var options = this.options();
     var url = require('fs').realpathSync(options.url);
+    var done = this.async();
 
     //TODO is this the syntax we desire? Fluent as it maybe, it seems like it could improve.
-    var puppeteer = require('./src/puppeteer').init(grunt);
+    var job = require('./src/puppeteer-eventEmitter');
+    var puppeteer = new job.init(grunt, options, function (isSuccessful) {
+      console.log(`resolve fired with value: ${isSuccessful}`);
+      done(isSuccessful);
+    });
 
     // Load up and Instantiate the test server
     if (options.server) { require(options.server); }
@@ -132,11 +134,9 @@ module.exports = function(grunt) {
       grunt.log.writeln();
       grunt.warn('Puppeteer timed out.');
     });
-    //TODO 
+    //TODO
 
-    // This task is async.
-    var done = this.async();
-
+    //TODO update this spawn method to work with the newer api.
     // Spawn puppeteer
     puppeteer.spawn(url, {
       // Additional Puppeteer options.
