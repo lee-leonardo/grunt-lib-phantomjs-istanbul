@@ -17,24 +17,45 @@
 const EventEmitter = require('events');
 
 const ipc = require('node-ipc');
+
+/*
+  TODO
+   - to allow this to be concurrent this id needs to be unique (i.e. add the __filename to the id!)
+   - pass the id's has in a connection request and have the monitor/semaphore to allow the scripts to only fire for requests with matching hashes.
+*/
 ipc.config.id = 'consumer';
 ipc.config.retry = 1500;
 ipc.config.maxConnections = 1;
 
-module.exports.init = class PuppeteerEventListener {
+module.exports.init = class PuppeteerEventListener extends EventEmitter {
   constructor({
     grunt,
     options,
     resolveCallback
   }) {
-    this.resolve = resolveCb; // thread is kept awake until this resolves. -> TODO kill this code when timeout is reached.
-    this.emitter = new EventEmitter();
+    super();
 
+    const {
+      url = "/Users/leolee/EWEGithub/epc-roomsandrates-web/src/static-content-test/scripts/ratesAndAvail/inventoryItemView_qunit.html"
+    } = options;
+
+    this.grunt = grunt; //Ehh, going to see if there's a better pattern.
+    this.options = options;
+    this.resolve = resolveCallback; // thread is kept awake until this resolves. -> TODO kill this code when timeout is reached.
+
+
+
+
+
+    //TODO maybe add this to the spawn call..,
     ipc.connectTo('producer', () => {
       ipc.of.producer.on('connect', () => {
         console.log('established connection with puppeteer-sock'.rainbow);
-        ipc.of.producer.emit('test.page', json);
+        ipc.of.producer.emit('test.page', url);
       });
+
+
+      //TODO need to setup emissions that pertain to logging into the console.
       //Error from qunit
       ipc.of.producer.on('qunit.log', res => {
         console.log(res.data);
@@ -43,6 +64,9 @@ module.exports.init = class PuppeteerEventListener {
       ipc.of.producer.on('qunit.error', res => {
         console.log(res.error);
       });
+
+
+
       // Error from puppeteer or ipc
       ipc.of.producer.on('error', error => {
         ipc.log('error: ', error);
@@ -52,7 +76,7 @@ module.exports.init = class PuppeteerEventListener {
         ipc.log("finised socket based operation".log);
         ipc.disconnect('producer');
 
-        this.done(res.successful);
+        this.resolve(res.successful);
 
         process.exit(0);
       });
@@ -63,12 +87,14 @@ module.exports.init = class PuppeteerEventListener {
     });
   }
 
-  cleanup() {
+  cleanup() {}
 
-  }
+  spawn() {}
+
+  halt() {}
 
   done(isSuccessful) {
     this.cleanup();
     this.resolve(isSuccessful);
   }
-}
+};
