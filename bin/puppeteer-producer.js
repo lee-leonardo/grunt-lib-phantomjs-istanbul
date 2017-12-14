@@ -30,7 +30,7 @@ ipc.serve(() => {
         // Configuring logger
         const consoleOptions = setup.consoleOptions({
           log: {
-            handler: (consoleMessage, options) => {
+            handler(consoleMessage, options) {
               console.log(consoleMessage.text);
               ipc.server.emit(socket, 'qunit.log', {
                 data: consoleMessage.text
@@ -38,7 +38,7 @@ ipc.serve(() => {
             }
           },
           error: {
-            handler: (consoleMessage, options) => {
+            handler(consoleMessage, options) {
               console.error(consoleMessage.text);
               ipc.server.emit(socket, 'qunit.error', {
                 error: consoleMessage.text

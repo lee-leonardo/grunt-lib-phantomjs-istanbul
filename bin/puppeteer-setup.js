@@ -22,33 +22,30 @@ function generateLogger(settings) {
     for (let i = 0; i < params.length; i++) {
       //Puppeteer ConsoleMessage object: https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-consolemessage
       const {
-        type
+        type,
+        text,
+        args
       } = params[i];
-
-      //TODO handle the JSON Handle Object - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
-      if (params[i] instanceof JSHandle) {
-        return;
-        /*
-        // Hint: use jsHandle.jsonValue() to translate the object into it's json representation.
-        // This could potentially be unnecessary noise, it could be logging from a missed console log...
-        */
-      }
 
       // Handle traces in a different way but allow the trace functionality to be overridden, defaults
       if (settings[type]) {
         const {
           handler,
+          promise = settings.defaults.promise,
           options = settings.defaults.options
         } = settings[type];
 
-        handler(params[i], options);
+        handler({ type, text }, options);
+        promise({ args }, options); //TODO handle the JSON Handle Object - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
       } else {
         const {
           handler,
+          promise,
           options
         } = settings.defaults
 
-        handler(params[i], options);
+        handler({ type, text }, options);
+        promise({ args }, options); //TODO handle the JSON Handle Object - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
       }
     }
   }

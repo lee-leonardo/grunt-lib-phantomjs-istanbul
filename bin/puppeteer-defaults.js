@@ -7,19 +7,43 @@ module.exports = {
   viewport: {},
   consoleOpt: {
     defaults: {
-      handler: (consoleMessage, options) => {
+      handler(consoleMessage, options) {
         console.log(`Puppeteer Console Log:`);
         console.log(`  Type: ${consoleMessage.type}`);
         console.log(`  Arguments: ${consoleMessage.args}`);
         console.log(`  Text: ${consoleMessage.text}`);
       },
-      options: {}
+      promise(consoleMessage, options) {
+        consoleMessage.args.forEach((promise) => {
+          try {
+            if (options.verbose) {
+              console.log(promise.jsonValue());
+            }
+          }
+          finally{}
+        });
+      },
+      options: {
+        verbose: false
+      },
     },
     trace: {
       handler: (consoleMessage, options) => {
         console.error(consoleMessage.text);
       },
-      options: {}
+      promise(consoleMessage, options) {
+        consoleMessage.args.forEach((promise) => {
+          try {
+            if (options.verbose) {
+              console.log(promise.jsonValue());
+            }
+          }
+          finally{}
+        });
+      },
+      options: {
+        verbose: false
+      },
     }
   }
 }
