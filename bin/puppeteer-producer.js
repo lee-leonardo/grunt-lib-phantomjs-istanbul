@@ -55,10 +55,6 @@ ipc.serve(() => {
 
         await page.on('console', setup.generateLogger(consoleOptions));
 
-        var moduleErrors = [];
-        var testErrors = [];
-        var assertionErrors = [];
-
         await page.exposeFunction('harness_moduleDone', context => {
           if (context.failed) {
             var msg = "Module Failed: " + context.name + "\n" + testErrors.join("\n");
@@ -156,6 +152,7 @@ ipc.serve(() => {
         await wait(ipc.config.retry);
 
         console.error("Tests timed out");
+        ipc.server.emit(socket, 'qunit.timeout');
         browser.close();
       })
       .catch(err => {

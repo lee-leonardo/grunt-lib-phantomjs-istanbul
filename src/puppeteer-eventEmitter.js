@@ -52,7 +52,9 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
     ipc.connectTo('producer', () => {
       ipc.of.producer.on('connect', () => {
         console.log('established connection with puppeteer-sock'.rainbow);
-        ipc.of.producer.emit('test.page', url);
+        ipc.of.producer.emit('test.page', {
+          url: this.url
+        });
       });
 
       //TODO need to setup emissions that pertain to logging into the console.
@@ -61,15 +63,23 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
         console.log(res.data);
       });
 
+      //TODO emit debug
+
       //Error from qunit
       ipc.of.producer.on('qunit.error', res => {
         console.log(res.error);
+      });
+
+      ipc.of.producer.on('qunit.timeout', () => {
+        //Handle Time Out
+        this.emit('fail.timeout');
       });
 
       // Error from puppeteer or ipc
       ipc.of.producer.on('error', error => {
         ipc.log('error: ', error);
         ipc.log('stack: ', error.stack);
+        this.emit('fail.load', this.url);
       });
 
       // Clean up connection to the producer.
@@ -77,6 +87,7 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
         ipc.log("finised socket based operation".log);
         ipc.disconnect('producer');
 
+        this.emit('done', res);
         this.resolve(res.successful);
 
         process.exit(0);
@@ -89,8 +100,6 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
   }
 
   cleanup() {}
-
-  halt() {}
 
   done(isSuccessful) {
     this.cleanup();

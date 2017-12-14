@@ -1,3 +1,4 @@
+const { JSHandle } = require('puppeteer');
 const {
   launch,
   viewport,
@@ -23,6 +24,15 @@ function generateLogger(settings) {
       const {
         type
       } = params[i];
+
+      //TODO handle the JSON Handle Object - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
+      if (params[i] instanceof JSHandle) {
+        return;
+        /*
+        // Hint: use jsHandle.jsonValue() to translate the object into it's json representation.
+        // This could potentially be unnecessary noise, it could be logging from a missed console log...
+        */
+      }
 
       // Handle traces in a different way but allow the trace functionality to be overridden, defaults
       if (settings[type]) {

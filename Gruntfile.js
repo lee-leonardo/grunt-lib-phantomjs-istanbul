@@ -101,7 +101,8 @@ module.exports = function(grunt) {
     var url = require('fs').realpathSync(options.url);
     var done = this.async();
 
-    //TODO is this the syntax we desire? Fluent as it maybe, it seems like it could improve.
+    // TODO is this the syntax we desire? Fluent as it maybe, it seems like it could improve.
+    // TODO puppeteer-producer spawning.
     var job = require('./src/puppeteer-eventEmitter');
     var puppeteer = new job.init(grunt, options, function (isSuccessful) {
       console.log(`resolve fired with value: ${isSuccessful}`);
@@ -121,7 +122,7 @@ module.exports = function(grunt) {
         grunt.log.writeln('debug:' + msg);
     });
 
-    // // Built-in error handlers.
+    // Built-in error handlers.
     puppeteer.on('fail.load', function(url) {
       puppeteer.halt();
       grunt.verbose.write('Running Puppeteer...').or.write('...');
@@ -136,7 +137,27 @@ module.exports = function(grunt) {
     });
     //TODO
 
-    //TODO update this spawn method to work with the newer api.
+    puppeteer.on('done', res => {
+      const { error } = res;
+
+      //clean up and etc..
+      if (error) { done(error); return; }
+      var assert = require('assert');
+      var difflet = require('difflet')({indent: 2, comment: true});
+      try {
+        assert.deepEqual(options.test.actual, options.expected, 'Actual should match expected.');
+        grunt.log.writeln('Test passed.');
+        done();
+      } catch (error) {
+        grunt.log.subhead('Assertion Failure');
+        console.log(difflet.compare(error.expected, error.actual));
+        done(error);
+      }
+    });
+
+    puppeteer.spawn();
+
+    //TODO update this spawn method to work with the newer api. -> TODO this needs to be cleaned up more...
     // Spawn puppeteer
     puppeteer.spawn(url, {
       // Additional Puppeteer options.
