@@ -13,9 +13,7 @@
      - move out puppeteer code into it's own repository.
      - create monitoring logic so that tests can be run in parallel
 */
-
 const EventEmitter = require('events');
-
 const ipc = require('node-ipc');
 
 /*
@@ -23,10 +21,6 @@ const ipc = require('node-ipc');
    - to allow this to be concurrent this id needs to be unique (i.e. add the __filename to the id!)
    - pass the id's has in a connection request and have the monitor/semaphore to allow the scripts to only fire for requests with matching hashes.
 */
-ipc.config.id = 'consumer';
-ipc.config.retry = 1500;
-ipc.config.maxConnections = 1;
-
 module.exports.init = class PuppeteerEventListener extends EventEmitter {
   constructor({
     grunt,
@@ -39,39 +33,41 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
       url = "/Users/leolee/EWEGithub/epc-roomsandrates-web/src/static-content-test/scripts/ratesAndAvail/inventoryItemView_qunit.html"
     } = options;
 
+    ipc.config.id = 'puppeteerConsumer:' + url;
+    ipc.config.retry = 1500;
+    ipc.config.maxConnections = 1;
+
+    this.url = url;
     this.grunt = grunt; //Ehh, going to see if there's a better pattern.
     this.options = options;
     this.resolve = resolveCallback; // thread is kept awake until this resolves. -> TODO kill this code when timeout is reached.
+  }
 
-
-
-
-
-    //TODO maybe add this to the spawn call..,
+  spawn() {
     ipc.connectTo('producer', () => {
       ipc.of.producer.on('connect', () => {
         console.log('established connection with puppeteer-sock'.rainbow);
         ipc.of.producer.emit('test.page', url);
       });
 
-
       //TODO need to setup emissions that pertain to logging into the console.
       //Error from qunit
       ipc.of.producer.on('qunit.log', res => {
         console.log(res.data);
       });
+
       //Error from qunit
       ipc.of.producer.on('qunit.error', res => {
         console.log(res.error);
       });
-
-
 
       // Error from puppeteer or ipc
       ipc.of.producer.on('error', error => {
         ipc.log('error: ', error);
         ipc.log('stack: ', error.stack);
       });
+
+      // Clean up connection to the producer.
       ipc.of.producer.on('done', res => {
         ipc.log("finised socket based operation".log);
         ipc.disconnect('producer');
@@ -88,8 +84,6 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
   }
 
   cleanup() {}
-
-  spawn() {}
 
   halt() {}
 
