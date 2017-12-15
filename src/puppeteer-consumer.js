@@ -9,7 +9,7 @@ var json = {
 };
 
 ipc.connectTo('producer', () => {
-  ipc.of.producer.on('connect', () => {
+  ipc.of.producer.on('connect', () => { //was 'connect'
     console.log('established connection with puppeteer-sock'.rainbow);
     ipc.of.producer.emit('test.page', json);
   });
