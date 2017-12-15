@@ -16,8 +16,6 @@
 const EventEmitter = require('events');
 const ipc = require('node-ipc');
 
-const producer = require('puppeteer-producer');
-
 /*
   TODO
    - to allow this to be concurrent this id needs to be unique (i.e. add the __filename to the id!)
@@ -31,15 +29,11 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
   }) {
     super();
 
-    const {
-      url = "/Users/leolee/EWEGithub/epc-roomsandrates-web/src/static-content-test/scripts/ratesAndAvail/inventoryItemView_qunit.html"
-    } = options;
-
-    ipc.config.id = 'puppeteerConsumer:' + url;
+    ipc.config.id = 'puppeteerConsumer:' + options.url;
     ipc.config.retry = 1500;
     ipc.config.maxConnections = 1;
 
-    this.url = url;
+    this.url = options.url;
     this.grunt = grunt; //Ehh, going to see if there's a better pattern.
     this.options = options;
     this.resolve = resolveCallback; // thread is kept awake until this resolves. -> TODO kill this code when timeout is reached.
@@ -48,6 +42,19 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
   spawn() {
     // TODO queue up the producer to fire
     // TODO: grunt.util.spawn
+
+    if (this.options.startProducer) {
+      console.log('creating child');
+      const { spawn } = require('child_process');
+
+      // If need be listeners can be attached to the child.
+      this.child = spawn('node', ['../bin/puppeteer-producer.js', JSON.stringify(this.options)], {
+        // shell: true,
+        // detached: true,
+      });
+    }
+
+    console.log('connecting to child');
 
     ipc.connectTo('producer', () => {
       ipc.of.producer.on('connect', () => {
@@ -99,7 +106,11 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
     });
   }
 
-  cleanup() {}
+  cleanup() {
+    if (this.options.startProducer) {
+      this.child.kill();
+    }
+  }
 
   done(isSuccessful) {
     this.cleanup();

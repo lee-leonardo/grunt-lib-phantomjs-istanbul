@@ -23,9 +23,6 @@ ipc.config.retry = 1500;
 ipc.config.maxConnections = 1;
 
 ipc.serve(() => {
-  ipc.server.on('connect', (data, socket) => {
-    ipc.server.emit(socket, 'handshake'); // TODO pass hash back here.
-  });
   ipc.server.on('test.page', (data, socket) => {
     ipc.log("received data: ".log, data);
 

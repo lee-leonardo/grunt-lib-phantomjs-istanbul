@@ -1,8 +1,6 @@
 'use strict';
 
-global.__basedir = __dirname;
-
-module.exports = function(grunt) {
+module.exports = function (grunt) {
 
   // Project configuration.
   grunt.initConfig({
@@ -20,9 +18,12 @@ module.exports = function(grunt) {
       basic: {
         options: {
           url: 'test/fixtures/basic.html',
+          startProducer: true,
           expected: [1, 2, 3, 4, 5, 6],
           test: function test(a, b, c) {
-            if (!test.actual) { test.actual = []; }
+            if (!test.actual) {
+              test.actual = [];
+            }
             test.actual.push(a, b, c);
           }
         }
@@ -42,6 +43,7 @@ module.exports = function(grunt) {
       headers: {
         options: {
           url: 'http://localhost:8075',
+          startProducer: true,
           server: './test/fixtures/headers_server.js',
           expected: 'custom_header_567',
           test: function test(msg) {
@@ -59,9 +61,12 @@ module.exports = function(grunt) {
       viewportSize: {
         options: {
           url: 'test/fixtures/viewportSize.html',
+          startProducer: true,
           expected: [1366, 800],
           test: function test(a, b) {
-            if (!test.actual) { test.actual = []; }
+            if (!test.actual) {
+              test.actual = [];
+            }
             test.actual.push(a, b);
           },
           puppeteer: {
@@ -78,7 +83,7 @@ module.exports = function(grunt) {
   });
 
   // The most basic of tests. Not even remotely comprehensive.
-  grunt.registerMultiTask('test', 'A test, of sorts.', function() {
+  grunt.registerMultiTask('test', 'A test, of sorts.', function () {
     /*
       Sequence of Events:
       1. spawn thread of producer
@@ -100,50 +105,55 @@ module.exports = function(grunt) {
     var options = this.options();
     var url = require('fs').realpathSync(options.url);
     var done = this.async();
-
-    // TODO is this the syntax we desire? Fluent as it maybe, it seems like it could improve.
-    // TODO puppeteer-producer spawning.
     var job = require('./src/puppeteer-eventEmitter');
-    var puppeteer = new job.init(grunt, options, function (isSuccessful) {
-      console.log(`resolve fired with value: ${isSuccessful}`);
-      done(isSuccessful);
+    var puppeteer = new job.init({
+      grunt: grunt,
+      options: options,
+      resolve: function (isSuccessful) {
+        console.log(`resolve fired with value: ${isSuccessful}`);
+        done(isSuccessful);
+      }
     });
 
     // Load up and Instantiate the test server
-    if (options.server) { require(options.server); }
+    if (options.server) {
+      require(options.server);
+    }
 
-    //TODO this needs to be updated
-    // Do something.
+    puppeteer.spawn();
     puppeteer.on('test', options.test);
-
-    puppeteer.on('done', puppeteer.halt);
-
-    puppeteer.on('debug', function(msg) {
-        grunt.log.writeln('debug:' + msg);
+    puppeteer.on('debug', function (msg) {
+      grunt.log.writeln('debug:' + msg);
     });
 
     // Built-in error handlers.
-    puppeteer.on('fail.load', function(url) {
-      puppeteer.halt();
+    puppeteer.on('fail.load', function (url) {
       grunt.verbose.write('Running Puppeteer...').or.write('...');
       grunt.log.error();
       grunt.warn('Puppeteer unable to load "' + url + '" URI.');
     });
 
-    puppeteer.on('fail.timeout', function() {
-      puppeteer.halt();
+    puppeteer.on('fail.timeout', function () {
       grunt.log.writeln();
       grunt.warn('Puppeteer timed out.');
     });
     //TODO
 
     puppeteer.on('done', res => {
-      const { error } = res;
+      const {
+        error
+      } = res;
 
       //clean up and etc..
-      if (error) { done(error); return; }
+      if (error) {
+        done(error);
+        return;
+      }
       var assert = require('assert');
-      var difflet = require('difflet')({indent: 2, comment: true});
+      var difflet = require('difflet')({
+        indent: 2,
+        comment: true
+      });
       try {
         assert.deepEqual(options.test.actual, options.expected, 'Actual should match expected.');
         grunt.log.writeln('Test passed.');
@@ -152,30 +162,6 @@ module.exports = function(grunt) {
         grunt.log.subhead('Assertion Failure');
         console.log(difflet.compare(error.expected, error.actual));
         done(error);
-      }
-    });
-
-    puppeteer.spawn();
-
-    //TODO update this spawn method to work with the newer api. -> TODO this needs to be cleaned up more...
-    // Spawn puppeteer
-    puppeteer.spawn(url, {
-      // Additional Puppeteer options.
-      options: options.puppeteer,
-      // Complete the task when done.
-      done: function(err) {
-        if (err) { done(err); return; }
-        var assert = require('assert');
-        var difflet = require('difflet')({indent: 2, comment: true});
-        try {
-          assert.deepEqual(options.test.actual, options.expected, 'Actual should match expected.');
-          grunt.log.writeln('Test passed.');
-          done();
-        } catch (err) {
-          grunt.log.subhead('Assertion Failure');
-          console.log(difflet.compare(err.expected, err.actual));
-          done(err);
-        }
       }
     });
   });
