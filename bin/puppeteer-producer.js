@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 const ipc = require('node-ipc');
 const puppeteer = require('puppeteer');
 
@@ -21,6 +23,9 @@ ipc.config.retry = 1500;
 ipc.config.maxConnections = 1;
 
 ipc.serve(() => {
+  ipc.server.on('connect', (data, socket) => {
+    ipc.server.emit(socket, 'handshake'); // TODO pass hash back here.
+  });
   ipc.server.on('test.page', (data, socket) => {
     ipc.log("received data: ".log, data);
 
@@ -168,3 +173,9 @@ ipc.serve(() => {
 })
 
 ipc.server.start();
+
+//TODO is this necessary if I fixed this?
+setTimeout(() => {
+  ipc.server.stop();
+  process.exit(0);
+}, 60000);
