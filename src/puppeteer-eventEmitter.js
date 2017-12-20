@@ -1,3 +1,5 @@
+const EventEmitter = require('events');
+const ipc = require('node-ipc');
 /*
   Steps:
   1. setup the event emitter syntax (using node events rather than 3rd party) and harmonize it with puppeteer consumer
@@ -13,20 +15,15 @@
      - move out puppeteer code into it's own repository.
      - create monitoring logic so that tests can be run in parallel
 */
-const EventEmitter = require('events');
-const ipc = require('node-ipc');
 
 /*
   TODO
    - to allow this to be concurrent this id needs to be unique (i.e. add the __filename to the id!)
    - pass the id's has in a connection request and have the monitor/semaphore to allow the scripts to only fire for requests with matching hashes.
 */
-module.exports.init = class PuppeteerEventListener extends EventEmitter {
-  constructor({
-    grunt,
-    options,
-    resolveCallback
-  }) {
+
+export default class PuppeteerEventListener extends EventEmitter {
+  constructor(options) {
     super();
 
     ipc.config.id = 'puppeteerConsumer:' + options.url;
@@ -34,28 +31,12 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
     ipc.config.maxConnections = 1;
 
     this.url = options.url;
-    this.grunt = grunt; //Ehh, going to see if there's a better pattern.
+    this.grunt = grunt;
     this.options = options;
-    this.resolve = resolveCallback; // thread is kept awake until this resolves. -> TODO kill this code when timeout is reached.
+    this.resolve = resolveCallback;
   }
 
   spawn() {
-    // TODO queue up the producer to fire
-    // TODO: grunt.util.spawn
-
-    if (this.options.startProducer) {
-      console.log('creating child');
-      const { spawn } = require('child_process');
-
-      // If need be listeners can be attached to the child.
-      this.child = spawn('node', ['../bin/puppeteer-producer.js', JSON.stringify(this.options)], {
-        // shell: true,
-        // detached: true,
-      });
-    }
-
-    console.log('connecting to child');
-
     ipc.connectTo('producer', () => {
       ipc.of.producer.on('connect', () => {
         console.log('established connection with puppeteer-sock'.rainbow);
@@ -84,8 +65,10 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
 
       // Error from puppeteer or ipc
       ipc.of.producer.on('error', error => {
-        ipc.log('error: ', error);
-        ipc.log('stack: ', error.stack);
+        if (this.options.verbose) {
+          ipc.log('error: ', error);
+        }
+
         this.emit('fail.load', this.url);
       });
 
@@ -116,4 +99,4 @@ module.exports.init = class PuppeteerEventListener extends EventEmitter {
     this.cleanup();
     this.resolve(isSuccessful);
   }
-};
+}
