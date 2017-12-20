@@ -118,15 +118,76 @@ ipc.serve(() => {
           process.exit(success ? 0 : 1);
         });
 
-        await page.goto('file://' + data.url);
-
-        if (options.injectScript) {
-          //TODO determine if one truly needs to await here...
-          page.addScriptTag({
-            content: options.injectScript
-          });
+        //TODO propagate the file protocol up to the event emitter or grunt layer
+        await page.goto(data.url);
+        /*
+          options.inject {
+            //Doc: https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
+            script: { url, path, content },
+            //Doc: https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddstyletagoptions
+            style: { url, path, content }
+          }
+        */
+        if (options.inject) {
+          if (options.inject.script) {
+            if (Array.isArray(options.test.script)) {
+              let i = 0;
+              let len = options.test.script.length;
+              for (; i < len; i++) {
+                await page.addScriptTag(options.test.script[i]);
+              }
+            } else {
+              await page.addScriptTag(options.test.script);
+            }
+          }
+          if (options.inject.style) {
+            if (Array.isArray(options.test.script)) {
+              let i = 0;
+              let len = options.test.script.length;
+              for (; i < len; i++) {
+                await page.addStyleTag(options.test.style[i]);
+              }
+            } else {
+              await page.addStyleTag(options.test.style);
+            }
+          }
         }
 
+        /*
+          // Result will emit to the key.
+          options.evaluate: {
+            //Doc: https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageevaluatepagefunction-args
+            key: { pageFunction, ..args }
+          }
+        */
+        if (options.evaluate) {
+          if (options.evaluate.script) {
+            var keys = Object.keys(script);
+            let i = 0;
+            let len = keys.length;
+            for (; i < len; i++) {
+              const key = keys[i];
+              const fn = options.evaluate.script[keys[i]];
+              const result = await page.evaluate(fn);
+              ipc.emit(key, {
+                result: JSON.parse(result)
+              });
+            }
+          }
+        }
+
+        //TODO...
+        if (options.runner) {
+          page.evaluate(options.runner.script);
+        }
+
+        /*
+          // Work on three different options:
+            1. an array that is a string represenation of a function for Function() emit result to test
+            2. emit to grunt to test.
+            3. a script that can be injected into the dom, this resolves itself
+            4. a script that will evaluate based on a specific context
+        */
         await page.evaluate(() => {
           QUnit.config.testTimeout = 10000;
 
