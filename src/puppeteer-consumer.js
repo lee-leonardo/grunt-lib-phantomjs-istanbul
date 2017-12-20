@@ -5,7 +5,7 @@ ipc.config.maxConnections = 1;
 
 //TODO this is test data...
 var json = {
-  url: "/Users/leolee/EWEGithub/epc-roomsandrates-web/src/static-content-test/scripts/ratesAndAvail/inventoryItemView_qunit.html"
+  url: "file:///Users/leolee/EWEGithub/epc-roomsandrates-web/src/static-content-test/scripts/ratesAndAvail/inventoryItemView_qunit.html"
 };
 
 ipc.connectTo('producer', () => {
