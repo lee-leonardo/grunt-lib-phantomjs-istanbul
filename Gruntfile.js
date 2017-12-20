@@ -103,67 +103,77 @@ module.exports = function (grunt) {
           consumer threads (if using monitor, there are many consumer threads)
     */
     var options = this.options();
-    var url = require('fs').realpathSync(options.url);
+    options.url = require('fs').realpathSync(options.url);
     var done = this.async();
-    var job = require('./src/puppeteer-eventEmitter');
-    var puppeteer = new job.init({
-      grunt: grunt,
-      options: options,
-      resolve: function (isSuccessful) {
-        console.log(`resolve fired with value: ${isSuccessful}`);
-        done(isSuccessful);
-      }
-    });
 
-    // Load up and Instantiate the test server
-    if (options.server) {
-      require(options.server);
+    options.resolve = function (isSuccessful, output) {
+
+      console.log('resolution');
+      //TODO add some output testing here?
+      done(isSuccessful);
     }
 
-    puppeteer.spawn();
-    puppeteer.on('test', options.test);
-    puppeteer.on('debug', function (msg) {
-      grunt.log.writeln('debug:' + msg);
-    });
+    var PuppetMaster = require('./src/puppetmaster');
+    var masterOfPuppets = new PuppetMaster(options);
 
-    // Built-in error handlers.
-    puppeteer.on('fail.load', function (url) {
-      grunt.verbose.write('Running Puppeteer...').or.write('...');
-      grunt.log.error();
-      grunt.warn('Puppeteer unable to load "' + url + '" URI.');
-    });
-
-    puppeteer.on('fail.timeout', function () {
-      grunt.log.writeln();
-      grunt.warn('Puppeteer timed out.');
-    });
     //TODO
 
-    puppeteer.on('done', res => {
-      const {
-        error
-      } = res;
-
-      //clean up and etc..
-      if (error) {
-        done(error);
-        return;
-      }
-      var assert = require('assert');
-      var difflet = require('difflet')({
-        indent: 2,
-        comment: true
-      });
-      try {
-        assert.deepEqual(options.test.actual, options.expected, 'Actual should match expected.');
-        grunt.log.writeln('Test passed.');
-        done();
-      } catch (error) {
-        grunt.log.subhead('Assertion Failure');
-        console.log(difflet.compare(error.expected, error.actual));
-        done(error);
-      }
+    masterOfPuppets.setupEvents({
+      grunt: grunt
     });
+    masterOfPuppets.listenOn("console.log", function () {
+
+    });
+
+    masterOfPuppets.start();
+
+    //TODO these are event listeners and the glue!
+    // puppeteer.on('test', options.test);
+    // puppeteer.on('debug', function (msg) {
+    //   grunt.log.writeln('debug:' + msg);
+    // });
+
+    // // Built-in error handlers.
+    // puppeteer.on('fail.load', function (url) {
+    //   grunt.verbose.write('Running Puppeteer...').or.write('...');
+    //   grunt.log.error();
+    //   grunt.warn('Puppeteer unable to load "' + url + '" URI.');
+    // });
+
+    // puppeteer.on('fail.timeout', function () {
+    //   grunt.log.writeln();
+    //   grunt.warn('Puppeteer timed out.');
+    // });
+    // //TODO
+
+    // puppeteer.on('done', res => {
+    //   const {
+    //     error
+    //   } = res;
+
+    //   //clean up and etc..
+    //   if (error) {
+    //     done(error);
+    //     return;
+    //   }
+    //   var assert = require('assert');
+    //   var difflet = require('difflet')({
+    //     indent: 2,
+    //     comment: true
+    //   });
+    //   try {
+    //     assert.deepEqual(options.test.actual, options.expected, 'Actual should match expected.');
+    //     grunt.log.writeln('Test passed.');
+    //     done();
+    //   } catch (error) {
+    //     grunt.log.subhead('Assertion Failure');
+    //     console.log(difflet.compare(error.expected, error.actual));
+    //     done(error);
+    //   }
+    // });
+
+
+
   });
 
   // The jshint plugin is used for linting.
@@ -171,5 +181,4 @@ module.exports = function (grunt) {
 
   // By default, lint library.
   grunt.registerTask('default', ['jshint', 'test']);
-
 };
