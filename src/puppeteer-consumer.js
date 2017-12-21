@@ -1,6 +1,8 @@
-var ipc = require('node-ipc');
+const ipc = require('node-ipc');
+
 ipc.config.id = 'consumer';
-ipc.config.retry = 1500;
+ipc.config.retry = 1000;
+ipc.config.maxRetries = 5;
 ipc.config.maxConnections = 1;
 
 //TODO this is test data...
