@@ -116,64 +116,54 @@ module.exports = function (grunt) {
     var PuppetMaster = require('./src/puppetmaster');
     var masterOfPuppets = new PuppetMaster(options);
 
-    //TODO
+    //TODO -> this needs to be cleaned up
+    masterOfPuppets.listenOn({
+      'test': options.test,
+      'debug': function (msg) {
+        grunt.log.writeln('debug:' + msg);
+      },
+      'console.log': function (message) {
+        //TODO this is temporary, need this to fire off callbacks to resolve the grunt job.
+        grunt.log(message);
+      },
+      'fail.load': function (url) {
+        grunt.verbose.write('Running Puppeteer...').or.write('...');
+        grunt.log.error();
+        grunt.warn('Puppeteer unable to load "' + url + '" URI.');
+      },
+      'fail.timeout': function () {
+        grunt.log.writeln();
+        grunt.warn('Puppeteer timed out.');
+      },
+      'done': function (res) {
+        const {
+          error
+        } = res;
 
-    masterOfPuppets.setupEvents({
-      grunt: grunt
-    });
-    masterOfPuppets.listenOn("console.log", function () {
+        //clean up and etc..
+        if (error) {
+          done(error);
+          return;
+        }
+        var assert = require('assert');
+        var difflet = require('difflet')({
+          indent: 2,
+          comment: true
+        });
+        try {
+          assert.deepEqual(options.test.actual, options.expected, 'Actual should match expected.');
+          grunt.log.writeln('Test passed.');
+          done();
+        } catch (error) {
+          grunt.log.subhead('Assertion Failure');
+          console.log(difflet.compare(error.expected, error.actual));
+          done(error);
+        }
+      },
 
-    });
+    })
 
     masterOfPuppets.start();
-
-    //TODO these are event listeners and the glue!
-    // puppeteer.on('test', options.test);
-    // puppeteer.on('debug', function (msg) {
-    //   grunt.log.writeln('debug:' + msg);
-    // });
-
-    // // Built-in error handlers.
-    // puppeteer.on('fail.load', function (url) {
-    //   grunt.verbose.write('Running Puppeteer...').or.write('...');
-    //   grunt.log.error();
-    //   grunt.warn('Puppeteer unable to load "' + url + '" URI.');
-    // });
-
-    // puppeteer.on('fail.timeout', function () {
-    //   grunt.log.writeln();
-    //   grunt.warn('Puppeteer timed out.');
-    // });
-    // //TODO
-
-    // puppeteer.on('done', res => {
-    //   const {
-    //     error
-    //   } = res;
-
-    //   //clean up and etc..
-    //   if (error) {
-    //     done(error);
-    //     return;
-    //   }
-    //   var assert = require('assert');
-    //   var difflet = require('difflet')({
-    //     indent: 2,
-    //     comment: true
-    //   });
-    //   try {
-    //     assert.deepEqual(options.test.actual, options.expected, 'Actual should match expected.');
-    //     grunt.log.writeln('Test passed.');
-    //     done();
-    //   } catch (error) {
-    //     grunt.log.subhead('Assertion Failure');
-    //     console.log(difflet.compare(error.expected, error.actual));
-    //     done(error);
-    //   }
-    // });
-
-
-
   });
 
   // The jshint plugin is used for linting.
