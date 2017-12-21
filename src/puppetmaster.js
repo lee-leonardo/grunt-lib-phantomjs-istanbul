@@ -24,33 +24,35 @@ export default class PuppetMaster {
         this.puppeteerId = 'producer';
         this.puppeteer = undefined;
         this.listener = undefined;
-
-        //TODO setup basic logging for grunt in a separate api file.
-
+        this.eventsMap = options.events || {}; // TODO add default logging
     }
 
+    /*
+        Computed Getters and Setters
+    */
     get puppetSocketPath() {
         return `/tmp/${this.appName}.${this.puppeteerId}`;
     }
 
+    /*
+        API
+    */
     // listen to the basic events.
-    events(logger) {
-
-    }
-
-    // event name is a string, the function call in the window. the callback will pass the json object.
-    listenOn(eventName, callback) {
-        this.listener.on(eventName, callback);
+    // this adds events that are not added via grunt options.
+    // TODO maybe store the event map here and pass it down at a later point.
+    // eventFnMap { eventName: callbackFunction }
+    listenOn(eventFnMap) {
+        Object.assign(this.eventsMap, eventFnMap);
     }
 
     //TODO this is the function that fires off the event sequence that spawn everythign.
     // this starts the listener and starts execution.
     start() {
-        this.listener.spawn();
-    }
+        const self = this;
+        //TODO grab the basic connection set from a file.
+        // this.listener.connectTo(this.puppeteerId);
 
-    init() {
-        let self = this;
+        //TODO deprecate this, use the other method, or at least rename the method
         return self.exists()
             .then(() => self.spawnProducer) // spawn the producer first, when it is fully online ~1.5s
             .then(() => self.spawnListener) // then spawn the emitter and sync it
@@ -76,6 +78,8 @@ export default class PuppetMaster {
         })
     }
 
+    // Spawns the child thread, returns a promise that waits until the child thread is up and running
+    // Stops execution on promise failure.
     spawnProducer() {
         if (this.puppeteer) throw new Error("Puppeteer already started");
 
@@ -84,59 +88,65 @@ export default class PuppetMaster {
             // detached: true
         });
 
-        let self = this
+        const self = this;
         this.exitHandler = () => self.done()
         global.process.on('exit', this.exitHandler);
 
-        return self.waitUntilRunning()
+        return self.waitUntilProducerRunning()
     }
 
-    spawnListener() {
-        if (this.listener) throw new Error("EventEmitter is already started");
-
-        //TODO add all the ish here!
-
-        this.listener = new PuppeteerEventListener({
-
-        });
-
-        return this.listener.waitUntilRunning()
-        //TODO setup the event emitter.
-        //TODO add a cusomizable interface to this.
-    }
-
-    setup() {}
-
-    waitUntilRunning() {
+    // Stops execution until producer is running, this is checked by the child_process' connected
+    // https://nodejs.org/api/child_process.html#child_process_subprocess_connected
+    waitUntilProducerRunning() {
         const self = this;
-
-        return self.listener.waitUntilRunning()
-
         return new Promise((resolve, reject) => {
             var startTime = Date.now();
             var check = () => {
-                self.isPuppeteerRunning(running => {
-                    if (!self.puppeteer) {
-                        return reject(Error('Puppeteer has been stopped'))
-                    }
+                if (!self.puppeteer) {
+                    return reject(Error('Puppeteer has been stopped'))
+                }
 
-                    if (running) {
-                        return resolve()
-                    }
+                if (self.puppeteer.connected) {
+                    return resolve()
+                }
 
-                    var elapsedTime = Date.now() - startTime
-                    if (elapsedTime > self.startTimeout) {
-                        return reject(Error(`Puppeteer did not start within ${self.startTimeout}ms`))
-                    }
+                var elapsedTime = Date.now() - startTime
+                if (elapsedTime > self.startTimeout) {
+                    return reject(Error(`Puppeteer did not start within ${self.startTimeout}ms`))
+                }
 
-                    global.setTimeout(check, 100);
-                })
+                global.setTimeout(check, 100)
             }
 
             check()
         })
     }
 
+
+    // Creates the listener object and then listens of the waitUntilRunning promise resolves
+    // Stops execution if the child does not spin up, times out, has trouble connecting, or something else.
+    spawnListener() {
+        if (this.listener) throw new Error("EventEmitter is already started");
+
+        // Add events here, from the store here
+        this.listener = new PuppeteerEventListener({
+            events: self.eventsMap
+        });
+
+        return this.listener.waitUntilRunning()
+    }
+
+    cleanup() {
+        //TODO figure out which is better
+        ipc.connectTo(this.puppeteerId, () => {
+            ipc.of[this.puppeteerId].on('connect', () => {
+                ipc.of[this.puppeteerId].emit('test.end')
+            })
+        })
+
+        //TODO figure out which is better
+        this.puppeteer.kill()
+    }
 
     done() {
         cleanup()
