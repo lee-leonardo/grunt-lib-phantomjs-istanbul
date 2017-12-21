@@ -60,16 +60,29 @@ export default class PuppeteerEventListener extends EventEmitter {
 
       ipc.of.producer.on('qunit.timeout', () => {
         //Handle Time Out
-        this.emit('fail.timeout');
+        self.emit('fail.timeout');
       });
 
       // Error from puppeteer or ipc
       ipc.of.producer.on('error', error => {
+        const {
+          code,
+          syscall
+        } = error;
         if (this.options.verbose) {
           ipc.log('error: ', error);
         }
 
-        this.emit('fail.load', this.url);
+        if ((code === 'ECONNREFUSED' || code === 'ENOENT') && syscall === 'connect') {
+          if (maxTries === 0) {
+            self.emit('fail.load', self.url);
+          }
+          else {
+            maxTries--;
+          }
+        }
+
+
       });
 
       // Clean up connection to the producer.
@@ -77,8 +90,8 @@ export default class PuppeteerEventListener extends EventEmitter {
         ipc.log("finised socket based operation".log);
         ipc.disconnect('producer');
 
-        this.emit('done', res);
-        this.resolve(res.successful);
+        self.emit('done', res);
+        self.resolve(res.successful);
 
         process.exit(0);
       });
@@ -87,6 +100,69 @@ export default class PuppeteerEventListener extends EventEmitter {
         ipc.log("disconnected from connection with puppeteer-sock".notice);
       });
     });
+  }
+
+  // add a single entry to the handler
+  on(eventName, handler) {
+    this.eventsMap[eventName] = handler;
+  }
+
+  addEventSet(eventHandlerMapOptional) {
+    const entries = Object.entries(eventHandlerMapOptional);
+    const len = entries.length;
+
+    for (let i = 0; i < len; i++) {
+      const [
+        eventName,
+        handler
+      ] = entries[i];
+
+      this.on(eventName, handler);
+    }
+  }
+
+  // name of the socket and a hash with { keys:callbacks
+  connectTo(socketId, eventHandlerMapOptional) {
+    this.addEventSet(eventHandlerMapOptional);
+
+    const entries = Object.entries(this.eventsMap);
+
+    ipc.connectTo(socketId, () => {
+      for (let i = 0; i < len; i++) {
+        const [
+          event,
+          handler
+        ] = entries[i];
+
+        ipc.of[socketId].on(event, handler);
+      }
+    });
+  }
+
+  waitUntilRunning() {
+    return new Promise((resolve, reject) => {
+      var startTime = Date.now();
+      var check = () => {
+          self.isPuppeteerRunning(running => {
+              if (!self.puppeteer) {
+                  return reject(Error('Puppeteer has been stopped'))
+              }
+
+              if (running) {
+                  return resolve()
+              }
+
+              var elapsedTime = Date.now() - startTime
+              if (elapsedTime > self.startTimeout) {
+                  return reject(Error(`Puppeteer did not start within ${self.startTimeout}ms`))
+              }
+
+              global.setTimeout(check, 100)
+          })
+      }
+
+      check()
+    })
   }
 
   cleanup() {
