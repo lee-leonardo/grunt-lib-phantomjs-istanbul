@@ -1,155 +1,156 @@
 const fs = require('fs')
 const {
-    spawn
+  spawn
 } = require('child_process')
 const PuppeteerEventListener = require('./puppeteer-eventEmitter');
 
 //The gruntfile code that launches and manages the instances
 export default class PuppetMaster {
-    constructor(options) {
-        const self = this;
-        //TODO add path
-        // object || defaults
-        options = options || {}
+  constructor(options) {
+    const self = this;
+    //TODO add path
+    // object || defaults
+    options = options || {}
 
-        //TODO need to sanitize the urls up here... need to revise this ish.
-        options.url = 'file://' + options.url;
-
-
-        this.resolve = options.resolve || function () {
-            self.puppeteer.kill();
-        } //TODO ? figure out a better way
-
-        this.appName = 'app';
-        this.puppeteerId = 'producer';
-        this.puppeteer = undefined;
-        this.listener = undefined;
-        this.eventsMap = options.events || {}; // TODO add default logging
-    }
-
-    /*
-        Computed Getters and Setters
-    */
-    get puppetSocketPath() {
-        return `/tmp/${this.appName}.${this.puppeteerId}`;
-    }
-
-    /*
-        API
-    */
-    // listen to the basic events.
-    // this adds events that are not added via grunt options.
-    // TODO maybe store the event map here and pass it down at a later point.
-    // eventFnMap { eventName: callbackFunction }
-    listenOn(eventFnMap) {
-        Object.assign(this.eventsMap, eventFnMap);
-    }
-
-    //TODO this is the function that fires off the event sequence that spawn everythign.
-    // this starts the listener and starts execution.
-    start() {
-        const self = this;
-        //TODO grab the basic connection set from a file.
-        // this.listener.connectTo(this.puppeteerId);
-
-        //TODO deprecate this, use the other method, or at least rename the method
-        return self.exists()
-            .then(() => self.spawnProducer) // spawn the producer first, when it is fully online ~1.5s
-            .then(() => self.spawnListener) // then spawn the emitter and sync it
-            .then(() => self) // the listener handles all events
-    }
-
-    exists() {
-        let self = this
-        return new Promise((resolve, reject) => {
-            if (self.debuggerAddress) resolve()
-
-            //TODO make sure this is pointing at the address for the temporary file.
-            if (typeof self.path !== 'string') {
-                return reject(Error('Application path must be a string'))
-            }
-
-            // go forward if
-            fs.stat(self.path, (err, stat) => {
-                if (err) return reject(err)
-                if (stat.isFile()) return resolve()
-                reject(Error(`Application path specified is not a file: ${self.path}`))
-            })
-        })
-    }
-
-    // Spawns the child thread, returns a promise that waits until the child thread is up and running
-    // Stops execution on promise failure.
-    spawnProducer() {
-        if (this.puppeteer) throw new Error("Puppeteer already started");
-
-        this.puppeteer = require('child_process').spawn('node', ['./bin/puppeteer-producer.js', '{}'], {
-            stdio: ['ignore', 'inherit', 'ignore'],
-            // detached: true
-        });
-
-        const self = this;
-        this.exitHandler = () => self.done()
-        global.process.on('exit', this.exitHandler);
-
-        return self.waitUntilProducerRunning()
-    }
-
-    // Stops execution until producer is running, this is checked by the child_process' connected
-    // https://nodejs.org/api/child_process.html#child_process_subprocess_connected
-    waitUntilProducerRunning() {
-        const self = this;
-        return new Promise((resolve, reject) => {
-            var startTime = Date.now();
-            var check = () => {
-                if (!self.puppeteer) {
-                    return reject(Error('Puppeteer has been stopped'))
-                }
-
-                if (self.puppeteer.connected) {
-                    return resolve()
-                }
-
-                var elapsedTime = Date.now() - startTime
-                if (elapsedTime > self.startTimeout) {
-                    return reject(Error(`Puppeteer did not start within ${self.startTimeout}ms`))
-                }
-
-                global.setTimeout(check, 100)
-            }
-
-            check()
-        })
-    }
+    //TODO need to sanitize the urls up here... need to revise this ish.
+    options.url = 'file://' + options.url;
 
 
-    // Creates the listener object and then listens of the waitUntilRunning promise resolves
-    // Stops execution if the child does not spin up, times out, has trouble connecting, or something else.
-    spawnListener() {
-        if (this.listener) throw new Error("EventEmitter is already started");
+    this.resolve = options.resolve || function () {
+      self.puppeteer.kill();
+    } //TODO ? figure out a better way
 
-        // Add events here, from the store here
-        this.listener = new PuppeteerEventListener({
-            events: self.eventsMap
-        });
+    this.appName = 'app';
+    this.puppeteerId = 'producer';
+    this.puppeteer = undefined;
+    this.listener = undefined;
+    this.eventsMap = options.events || {}; // TODO add default logging
+  }
 
-        return this.listener.waitUntilRunning()
-    }
+  /*
+      Computed Getters and Setters
+  */
+  get puppetSocketPath() {
+    return `/tmp/${this.appName}.${this.puppeteerId}`;
+  }
 
-    cleanup() {
-        //TODO figure out which is better
-        ipc.connectTo(this.puppeteerId, () => {
-            ipc.of[this.puppeteerId].on('connect', () => {
-                ipc.of[this.puppeteerId].emit('test.end')
-            })
-        })
+  /*
+      API
+  */
+  // listen to the basic events.
+  // this adds events that are not added via grunt options.
+  // TODO maybe store the event map here and pass it down at a later point.
+  // eventFnMap { eventName: callbackFunction }
+  listenOn(eventFnMap) {
+    Object.assign(this.eventsMap, eventFnMap);
+  }
 
-        //TODO figure out which is better
-        this.puppeteer.kill()
-    }
+  //TODO this is the function that fires off the event sequence that spawn everythign.
+  // this starts the listener and starts execution.
+  start() {
+    const self = this;
+    //TODO grab the basic connection set from a file.
+    // this.listener.connectTo(this.puppeteerId);
 
-    done() {
-        cleanup()
-        resolve()
-    }
+    //TODO deprecate this, use the other method, or at least rename the method
+    return self.exists()
+      .then(() => self.spawnProducer) // spawn the producer first, when it is fully online ~1.5s
+      .then(() => self.spawnListener) // then spawn the emitter and sync it
+      .then(() => self) // the listener handles all events
+  }
+
+  // Ensures that the url path given is a valid path.
+  exists() {
+    let self = this
+    return new Promise((resolve, reject) => {
+      if (self.debuggerAddress) resolve()
+
+      //TODO make sure this is pointing at the address for the temporary file.
+      if (typeof self.path !== 'string') {
+        return reject(Error('Application path must be a string'))
+      }
+
+      // TODO self.path needs to be the relevant object param to the test file.
+      fs.stat(self.path, (err, stat) => {
+        if (err) return reject(err)
+        if (stat.isFile()) return resolve()
+        reject(Error(`Application path specified is not a file: ${self.path}`))
+      })
+    })
+  }
+
+  // Spawns the child thread, returns a promise that waits until the child thread is up and running
+  // Stops execution on promise failure.
+  spawnProducer() {
+    if (this.puppeteer) throw new Error("Puppeteer already started");
+
+    this.puppeteer = require('child_process').spawn('node', ['./bin/puppeteer-producer.js', '{}'], {
+      stdio: ['ignore', 'inherit', 'ignore'],
+      // detached: true
+    });
+
+    const self = this;
+    this.exitHandler = () => self.done()
+    global.process.on('exit', this.exitHandler);
+
+    return self.waitUntilProducerRunning()
+  }
+
+  // Stops execution until producer is running, this is checked by the child_process' connected
+  // https://nodejs.org/api/child_process.html#child_process_subprocess_connected
+  waitUntilProducerRunning() {
+    const self = this;
+    return new Promise((resolve, reject) => {
+      var startTime = Date.now();
+      var check = () => {
+        if (!self.puppeteer) {
+          return reject(Error('Puppeteer has been stopped'))
+        }
+
+        if (self.puppeteer.connected) {
+          return resolve()
+        }
+
+        var elapsedTime = Date.now() - startTime
+        if (elapsedTime > self.startTimeout) {
+          return reject(Error(`Puppeteer did not start within ${self.startTimeout}ms`))
+        }
+
+        global.setTimeout(check, 100)
+      }
+
+      check()
+    })
+  }
+
+
+  // Creates the listener object and then listens of the waitUntilRunning promise resolves
+  // Stops execution if the child does not spin up, times out, has trouble connecting, or something else.
+  spawnListener() {
+    if (this.listener) throw new Error("EventEmitter is already started");
+
+    // Add events here, from the store here
+    this.listener = new PuppeteerEventListener({
+      events: self.eventsMap
+    });
+
+    return this.listener.waitUntilRunning()
+  }
+
+  cleanup() {
+    //TODO figure out which is better
+    ipc.connectTo(this.puppeteerId, () => {
+      ipc.of[this.puppeteerId].on('connect', () => {
+        ipc.of[this.puppeteerId].emit('test.end')
+      })
+    })
+
+    //TODO figure out which is better
+    this.puppeteer.kill()
+  }
+
+  done() {
+    cleanup()
+    resolve()
+  }
 }
