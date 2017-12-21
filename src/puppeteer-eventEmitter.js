@@ -21,7 +21,6 @@ const ipc = require('node-ipc');
    - to allow this to be concurrent this id needs to be unique (i.e. add the __filename to the id!)
    - pass the id's has in a connection request and have the monitor/semaphore to allow the scripts to only fire for requests with matching hashes.
 */
-
 export default class PuppeteerEventListener extends EventEmitter {
   constructor(options) {
     super();
@@ -29,19 +28,45 @@ export default class PuppeteerEventListener extends EventEmitter {
     ipc.config.id = 'puppeteerConsumer:' + options.url;
     ipc.config.retry = 1500;
     ipc.config.maxConnections = 1;
+    ipc.config.maxRetries = 5;
 
+    this.totalTries = 0;
     this.url = options.url;
     this.grunt = grunt;
     this.options = options;
     this.resolve = resolveCallback;
+    this.eventsMap = options.events || {};
   }
 
-  spawn() {
+  // TODO rename this, spawn is pretty weird, more like connect or start... start seems to be the go to to handles the async nature...
+  start() {
+    //TODO more succinct version;
+    //this.connectTo('producer');
+    //TODO reuse of a fn.
+    // this.connectTo('producer', {
+    //   "connect": () => {
+    //   },
+    //   "qunit.log": res => {
+    //   },
+    //   "qunit.error": res => {
+    //   },
+    //   "qunit.timeout": () => {
+    //   },
+    //   "error": error => {
+    //   },
+    //   "done": res => {
+    //   },
+    //   "disconnect" : () => {
+    //   }
+    // });
+
+    //TODO old way
+    const self = this;
     ipc.connectTo('producer', () => {
       ipc.of.producer.on('connect', () => {
         console.log('established connection with puppeteer-sock'.rainbow);
         ipc.of.producer.emit('test.page', {
-          url: this.url
+          url: self.url
         });
       });
 
@@ -64,6 +89,7 @@ export default class PuppeteerEventListener extends EventEmitter {
       });
 
       // Error from puppeteer or ipc
+      // Has a separate
       ipc.of.producer.on('error', error => {
         const {
           code,
@@ -73,16 +99,16 @@ export default class PuppeteerEventListener extends EventEmitter {
           ipc.log('error: ', error);
         }
 
-        if ((code === 'ECONNREFUSED' || code === 'ENOENT') && syscall === 'connect') {
-          if (maxTries === 0) {
+        // ENOENT fires when socket file has not been created.
+        // ECONNREFUSED fires when socket file exists but is either busy or unused.
+        if ((code === 'ENOENT' || code === 'ECONNREFUSED') && syscall === 'connect') {
+          if (totalTries === ipc.config.maxRetries) {
             self.emit('fail.load', self.url);
           }
           else {
-            maxTries--;
+            totalTries++;
           }
         }
-
-
       });
 
       // Clean up connection to the producer.
@@ -126,6 +152,7 @@ export default class PuppeteerEventListener extends EventEmitter {
     this.addEventSet(eventHandlerMapOptional);
 
     const entries = Object.entries(this.eventsMap);
+    const len = entries.length;
 
     ipc.connectTo(socketId, () => {
       for (let i = 0; i < len; i++) {
