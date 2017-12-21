@@ -11,6 +11,10 @@ if (!args) {
   process.exit(1);
 }
 
+// TODO add support for cli not just json str
+// TODO maybe use the data object to pass information rather relying on the cli too much.
+// TODO maybe abstract out this into two parts?
+var connected = false;
 const [
   opts // puppeteer options
 ] = args;
@@ -18,13 +22,16 @@ const options = JSON.parse(opts || {});
 const launchOptions = setup.launchOptions(options.puppeteer);
 const viewportOptions = setup.viewPortOptions(options.viewport);
 
-ipc.config.id = 'producer';
+ipc.config.id = 'producer'; //TODO make this editable by the cli or json
 ipc.config.retry = 1500;
 ipc.config.maxConnections = 1;
 
 ipc.serve(() => {
   ipc.server.on('test.page', (data, socket) => {
+    connected = true;
     ipc.log("received data: ".log, data);
+
+    //TODO data is json so we can use that to infer many types of information such as what type of testing framework and other things like what event to emit events to!
 
     puppeteer
       .launch(launchOptions)
@@ -56,6 +63,19 @@ ipc.serve(() => {
         var assertionErrors = [];
 
         await page.on('console', setup.generateLogger(consoleOptions));
+
+        if (options.expose) {
+          let entries = Object.entries(options.expose);
+          let len = entries.length;
+          for (let i = 0; i < len; i++) {
+            let [
+              fnName,// the function will be exposed on the window object
+              fnPath // the path will be where node will pick up the fn and stick into the window obj
+            ] = entries[i]
+
+            await page.exposeFunction(domName, require(fnPath))
+          }
+        }
 
         await page.exposeFunction('harness_moduleDone', context => {
           if (context.failed) {
@@ -118,7 +138,6 @@ ipc.serve(() => {
           process.exit(success ? 0 : 1);
         });
 
-        //TODO propagate the file protocol up to the event emitter or grunt layer
         await page.goto(data.url);
         /*
           options.inject {
@@ -131,9 +150,8 @@ ipc.serve(() => {
         if (options.inject) {
           if (options.inject.script) {
             if (Array.isArray(options.test.script)) {
-              let i = 0;
               let len = options.test.script.length;
-              for (; i < len; i++) {
+              for (let i = 0; i < len; i++) {
                 await page.addScriptTag(options.test.script[i]);
               }
             } else {
@@ -142,9 +160,8 @@ ipc.serve(() => {
           }
           if (options.inject.style) {
             if (Array.isArray(options.test.script)) {
-              let i = 0;
               let len = options.test.script.length;
-              for (; i < len; i++) {
+              for (let i = 0; i < len; i++) {
                 await page.addStyleTag(options.test.style[i]);
               }
             } else {
@@ -162,12 +179,15 @@ ipc.serve(() => {
         */
         if (options.evaluate) {
           if (options.evaluate.script) {
-            var keys = Object.keys(script);
+            const entries = Object.entries(script);
             let i = 0;
-            let len = keys.length;
-            for (; i < len; i++) {
-              const key = keys[i];
-              const fn = options.evaluate.script[keys[i]];
+            const len = entries.length;
+            for (let i = 0; i < len; i ++) {
+              const [
+                eventName,
+                fn
+              ] = entries[i];
+
               const result = await page.evaluate(fn);
               ipc.emit(key, {
                 result: JSON.parse(result)
@@ -178,7 +198,7 @@ ipc.serve(() => {
 
         //TODO...
         if (options.runner) {
-          page.evaluate(options.runner.script);
+          await page.evaluate(options.runner.script);
         }
 
         /*
@@ -223,8 +243,14 @@ ipc.serve(() => {
         process.exit(1);
       });
   });
+  ipc.server.on('test.end', (data, socket) => {
+    ipc.server.stop();
+    process.exit(0);
+  });
   ipc.server.on('socket.disconnected', (data, socket) => {
     ipc.log("DISCONNECTED\n\n");
+
+    //TODO this needs to be moved.
     ipc.server.stop();
     process.exit(0);
   });
@@ -234,6 +260,9 @@ ipc.server.start();
 
 //TODO is this necessary if I fixed this?
 setTimeout(() => {
-  ipc.server.stop();
-  process.exit(0);
-}, 60000);
+  if (!connected) {
+    ipc.log("stopping server due to lack of connection");
+    ipc.server.stop();
+    process.exit(0);
+  }
+}, 10000);
