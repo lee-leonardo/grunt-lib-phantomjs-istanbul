@@ -16,11 +16,21 @@ export default class PuppetMaster {
         options.url = 'file://' + options.url;
 
 
-        this.resolve = options.resolve || function () { self.puppeteer.kill(); }
+        this.resolve = options.resolve || function () {
+            self.puppeteer.kill();
+        } //TODO ? figure out a better way
 
+        this.appName = 'app';
+        this.puppeteerId = 'producer';
         this.puppeteer = undefined;
         this.listener = undefined;
 
+        //TODO setup basic logging for grunt in a separate api file.
+
+    }
+
+    get puppetSocketPath() {
+        return `/tmp/${this.appName}.${this.puppeteerId}`;
     }
 
     // listen to the basic events.
@@ -40,7 +50,7 @@ export default class PuppetMaster {
     }
 
     init() {
-        var self = this;
+        let self = this;
         return self.exists()
             .then(() => self.spawnProducer) // spawn the producer first, when it is fully online ~1.5s
             .then(() => self.spawnListener) // then spawn the emitter and sync it
@@ -48,10 +58,11 @@ export default class PuppetMaster {
     }
 
     exists() {
-        var self = this
+        let self = this
         return new Promise((resolve, reject) => {
             if (self.debuggerAddress) resolve()
 
+            //TODO make sure this is pointing at the address for the temporary file.
             if (typeof self.path !== 'string') {
                 return reject(Error('Application path must be a string'))
             }
@@ -73,12 +84,11 @@ export default class PuppetMaster {
             // detached: true
         });
 
-        var self = this
+        let self = this
         this.exitHandler = () => self.done()
         global.process.on('exit', this.exitHandler);
 
-        this.setup()
-        return this.waitUntilRunning();
+        return self.waitUntilRunning()
     }
 
     spawnListener() {
@@ -90,7 +100,7 @@ export default class PuppetMaster {
 
         });
 
-        this.listener
+        return this.listener.waitUntilRunning()
         //TODO setup the event emitter.
         //TODO add a cusomizable interface to this.
     }
@@ -99,28 +109,34 @@ export default class PuppetMaster {
 
     waitUntilRunning() {
         const self = this;
+
+        return self.listener.waitUntilRunning()
+
         return new Promise((resolve, reject) => {
             var startTime = Date.now();
-            var check = (running => {
-                if (!self.puppeteer) {
-                    return reject(Error('Puppeteer has been stopped'))
-                }
+            var check = () => {
+                self.isPuppeteerRunning(running => {
+                    if (!self.puppeteer) {
+                        return reject(Error('Puppeteer has been stopped'))
+                    }
 
-                if (running) {
-                    return resolve()
-                }
+                    if (running) {
+                        return resolve()
+                    }
 
-                var elapsedTime = Date.now() - startTime
-                if (elapsedTime > self.startTimeout) {
-                    return reject(Error(`Puppeteer did not start within ${self.startTimeout}ms`))
-                }
+                    var elapsedTime = Date.now() - startTime
+                    if (elapsedTime > self.startTimeout) {
+                        return reject(Error(`Puppeteer did not start within ${self.startTimeout}ms`))
+                    }
 
-                global.setTimeout(check, 100);
-            })
+                    global.setTimeout(check, 100);
+                })
+            }
 
             check()
-        });
+        })
     }
+
 
     done() {
         cleanup()
