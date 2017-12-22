@@ -21,7 +21,6 @@ class PuppeteerConsoleError extends Error {
   }
 }
 
-//TODO is this a good api?
 function defaultLog({
   param,
   options,
@@ -33,7 +32,7 @@ function defaultLog({
 
 module.exports = {
   consoleOpt: {
-    defaults: defaultLog()
+    defaults: defaultLog
   },
   PuppeteerConsoleLog,
   PuppeteerConsoleError
