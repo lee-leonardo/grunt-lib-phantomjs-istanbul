@@ -69,7 +69,7 @@ ipc.serve(() => {
           let len = entries.length;
           for (let i = 0; i < len; i++) {
             let [
-              fnName,// the function will be exposed on the window object
+              fnName, // the function will be exposed on the window object
               fnPath // the path will be where node will pick up the fn and stick into the window obj
             ] = entries[i]
 
@@ -182,7 +182,7 @@ ipc.serve(() => {
             const entries = Object.entries(script);
             let i = 0;
             const len = entries.length;
-            for (let i = 0; i < len; i ++) {
+            for (let i = 0; i < len; i++) {
               const [
                 eventName,
                 fn
@@ -208,26 +208,27 @@ ipc.serve(() => {
             3. a script that can be injected into the dom, this resolves itself
             4. a script that will evaluate based on a specific context
         */
-        await page.evaluate(() => {
-          QUnit.config.testTimeout = 10000;
+        //TODO rm
+        // await page.evaluate(() => {
+        //   QUnit.config.testTimeout = 10000;
 
-          // Cannot pass the window.harness_blah methods directly, because they are
-          // automatically defined as async methods, which QUnit does not support
-          QUnit.moduleDone((context) => {
-            window.harness_moduleDone(context);
-          });
-          QUnit.testDone((context) => {
-            window.harness_testDone(context);
-          });
-          QUnit.log((context) => {
-            window.harness_log(context);
-          });
-          QUnit.done((context) => {
-            window.harness_done(context);
-          });
+        //   // Cannot pass the window.harness_blah methods directly, because they are
+        //   // automatically defined as async methods, which QUnit does not support
+        //   QUnit.moduleDone((context) => {
+        //     window.harness_moduleDone(context);
+        //   });
+        //   QUnit.testDone((context) => {
+        //     window.harness_testDone(context);
+        //   });
+        //   QUnit.log((context) => {
+        //     window.harness_log(context);
+        //   });
+        //   QUnit.done((context) => {
+        //     window.harness_done(context);
+        //   });
 
-          console.log("\nRunning: " + JSON.stringify(QUnit.urlParams) + "\n");
-        });
+        //   console.log("\nRunning: " + JSON.stringify(QUnit.urlParams) + "\n");
+        // });
 
         function wait(ms) {
           return new Promise(resolve => setTimeout(resolve, ms));

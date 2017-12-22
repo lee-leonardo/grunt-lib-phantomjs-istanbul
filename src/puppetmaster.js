@@ -5,7 +5,8 @@ const {
 const PuppeteerEventListener = require('./puppeteer-eventEmitter');
 
 //The gruntfile code that launches and manages the instances
-export default class PuppetMaster {
+/*exports default*/
+class PuppetMaster {
   constructor(options) {
     const self = this;
     //TODO add path
@@ -13,8 +14,8 @@ export default class PuppetMaster {
     options = options || {}
 
     //TODO need to sanitize the urls up here... need to revise this ish.
-    options.url = 'file://' + options.url;
-
+    this.path = options.url;
+    this.startTimeout = options.startTimeout || 1000;
 
     this.resolve = options.resolve || function () {
       self.puppeteer.kill();
@@ -54,9 +55,22 @@ export default class PuppetMaster {
 
     //TODO deprecate this, use the other method, or at least rename the method
     return self.exists()
-      .then(() => self.spawnProducer) // spawn the producer first, when it is fully online ~1.5s
-      .then(() => self.spawnListener) // then spawn the emitter and sync it
-      .then(() => self) // the listener handles all events
+      .then(() => {
+        return self.spawnProducer()
+      }) // spawn the producer first, when it is fully online ~1.5s
+      .then(() => {
+        return self.spawnListener()
+      }) // then spawn the emitter and sync it
+      .then(() => {
+        self.listener.start()
+
+        return self
+      }) // the listener handles all events
+    // .catch((err) => {
+    //   console.log('The Application failed to start');
+    //   console.error(err);
+    //   process.kill(1);
+    // })
   }
 
   // Ensures that the url path given is a valid path.
@@ -85,9 +99,13 @@ export default class PuppetMaster {
     if (this.puppeteer) throw new Error("Puppeteer already started");
 
     this.puppeteer = require('child_process').spawn('node', ['./bin/puppeteer-producer.js', '{}'], {
-      stdio: ['ignore', 'inherit', 'ignore'],
+      stdio: ['ignore', 'inherit', 'ignore', 'ipc'],
       // detached: true
     });
+
+    this.puppeteer.on('exit', () => {
+      self.exitHandler();
+    })
 
     const self = this;
     this.exitHandler = () => self.done()
@@ -99,8 +117,8 @@ export default class PuppetMaster {
   // Stops execution until producer is running, this is checked by the child_process' connected
   // https://nodejs.org/api/child_process.html#child_process_subprocess_connected
   waitUntilProducerRunning() {
-    const self = this;
     return new Promise((resolve, reject) => {
+      const self = this;
       var startTime = Date.now();
       var check = () => {
         if (!self.puppeteer) {
@@ -123,18 +141,22 @@ export default class PuppetMaster {
     })
   }
 
-
   // Creates the listener object and then listens of the waitUntilRunning promise resolves
   // Stops execution if the child does not spin up, times out, has trouble connecting, or something else.
   spawnListener() {
     if (this.listener) throw new Error("EventEmitter is already started");
 
     // Add events here, from the store here
+    const self = this;
     this.listener = new PuppeteerEventListener({
-      events: self.eventsMap
-    });
+      url: self.path,
+      events: self.eventsMap,
+      resolve: self.resolve
+    })
 
-    return this.listener.waitUntilRunning()
+    return new Promise((resolve, reject) => {
+      resolve()
+    })
   }
 
   cleanup() {
@@ -154,3 +176,5 @@ export default class PuppetMaster {
     resolve()
   }
 }
+
+module.exports = PuppetMaster
