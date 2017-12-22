@@ -29,13 +29,6 @@ class PuppetMaster {
   }
 
   /*
-      Computed Getters and Setters
-  */
-  get puppetSocketPath() {
-    return `/tmp/${this.appName}.${this.puppeteerId}`;
-  }
-
-  /*
       API
   */
   // listen to the basic events.
@@ -161,19 +154,12 @@ class PuppetMaster {
 
   cleanup() {
     //TODO figure out which is better
-    ipc.connectTo(this.puppeteerId, () => {
-      ipc.of[this.puppeteerId].on('connect', () => {
-        ipc.of[this.puppeteerId].emit('test.end')
-      })
-    })
-
-    //TODO figure out which is better
     this.puppeteer.kill()
   }
 
   done() {
-    cleanup()
-    resolve()
+    this.cleanup()
+    this.resolve()
   }
 }
 
