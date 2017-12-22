@@ -122,7 +122,6 @@ module.exports = function (grunt) {
         grunt.log.writeln('debug:' + msg);
       },
       'console.log': function (message) {
-        //TODO this is temporary, need this to fire off callbacks to resolve the grunt job.
         grunt.log(message);
       },
       'fail.load': function (url) {
