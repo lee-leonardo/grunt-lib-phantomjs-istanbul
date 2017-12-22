@@ -1,5 +1,9 @@
 const EventEmitter = require('events');
 const ipc = require('node-ipc');
+
+const eventDefaults = require('./puppeteerEmitterEventsDefaults');
+const AddressHandler = require('./puppeteerAddressHandler');
+
 /*
   Steps:
   1. setup the event emitter syntax (using node events rather than 3rd party) and harmonize it with puppeteer consumer
@@ -31,107 +35,18 @@ class PuppeteerEventListener extends EventEmitter {
     ipc.config.maxConnections = 1;
     ipc.config.maxRetries = 5;
 
+    this.socketId = options.socketName || 'producer';
+    this.verbose = options.verbose || false;
     this.totalTries = 0;
     this.url = options.url;
     this.grunt = options.grunt;
     this.options = options;
     this.resolve = options.resolve; //the callback from puppetmaster
-    this.eventsMap = options.events || {};
+    this.eventsMap = Object.assign(eventDefaults(this, ipc), options.events);
   }
 
-  // TODO rename this, spawn is pretty weird, more like connect or start... start seems to be the go to to handles the async nature...
   start() {
-    console.log("puppeteer-eventEmitter start()");
-
-    //TODO more succinct version;
-    //this.connectTo('producer');
-    //TODO reuse of a fn.
-    // this.connectTo('producer', {
-    //   "connect": () => {
-    //   },
-    //   "qunit.log": res => {
-    //   },
-    //   "qunit.error": res => {
-    //   },
-    //   "qunit.timeout": () => {
-    //   },
-    //   "error": error => {
-    //   },
-    //   "done": res => {
-    //   },
-    //   "disconnect" : () => {
-    //   }
-    // });
-
-    //TODO old way
-    const self = this;
-    const url = this.handleProtocol() + this.url;
-
-    ipc.connectTo('producer', () => {
-      console.log("connected to producer");
-
-      ipc.of.producer.on('connect', () => {
-        console.log('established connection with puppeteer-sock'.rainbow);
-        ipc.of.producer.emit('test.page', {
-          url: url
-        });
-      });
-
-      //TODO need to setup emissions that pertain to logging into the console.
-      //Error from qunit
-      ipc.of.producer.on('qunit.log', res => {
-        console.log(res.data);
-      });
-
-      //TODO emit debug
-
-      //Error from qunit
-      ipc.of.producer.on('qunit.error', res => {
-        console.log(res.error);
-      });
-
-      ipc.of.producer.on('qunit.timeout', () => {
-        //Handle Time Out
-        self.emit('fail.timeout');
-      });
-
-      // Error from puppeteer or ipc
-      // Has a separate
-      ipc.of.producer.on('error', error => {
-        const {
-          code,
-          syscall
-        } = error;
-        if (this.options.verbose) {
-          ipc.log('error: ', error);
-        }
-
-        // ENOENT fires when socket file has not been created.
-        // ECONNREFUSED fires when socket file exists but is either busy or unused.
-        if ((code === 'ENOENT' || code === 'ECONNREFUSED') && syscall === 'connect') {
-          if (self.totalTries === 0) {
-            self.emit('fail.load', self.url);
-          } else {
-            self.totalTries++;
-          }
-        }
-      });
-
-      // Clean up connection to the producer.
-      ipc.of.producer.on('done', res => {
-        ipc.log("finised socket based operation".log);
-        ipc.disconnect('producer');
-
-        self.emit('done', res);
-        self.resolve(res.successful);
-
-        //process.exit(0);
-      });
-      // This line will only happen if there is a issue on the producers end.
-      ipc.of.producer.on('disconnect', () => {
-        ipc.log("disconnected from connection with puppeteer-sock".notice);
-      });
-    });
+    this.connectTo('producer');
   }
 
   // add a single entry to the handler
@@ -155,7 +70,15 @@ class PuppeteerEventListener extends EventEmitter {
 
   // name of the socket and a hash with { keys:callbacks
   connectTo(socketId, eventHandlerMapOptional) {
-    this.addEventSet(eventHandlerMapOptional);
+    if (this.verbose) {
+      console.log("socket id: ", this.socketId);
+      console.log("url path", this.url);
+      console.log("address from computed getter: ", this.address);
+    }
+
+    if (eventHandlerMapOptional) {
+      this.addEventSet(eventHandlerMapOptional);
+    }
 
     const entries = Object.entries(this.eventsMap);
     const len = entries.length;
@@ -172,14 +95,13 @@ class PuppeteerEventListener extends EventEmitter {
     });
   }
 
-  handleProtocol() {
-    console.log(`work with this: '${this.url}' to find url`);
-    return "file://";
+  async getBrowserAddress() {
+    return await AddressHandler(this.url)
   }
 
   cleanup() {
     if (this.options.startProducer) {
-      this.child.kill();
+      this.puppeteer.kill();
     }
   }
 
