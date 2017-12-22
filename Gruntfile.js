@@ -107,8 +107,7 @@ module.exports = function (grunt) {
     var done = this.async();
 
     options.resolve = function (isSuccessful, output) {
-
-      console.log('resolution');
+      console.log('Test Finished');
       //TODO add some output testing here?
       done(isSuccessful);
     }
@@ -134,6 +133,9 @@ module.exports = function (grunt) {
       'fail.timeout': function () {
         grunt.log.writeln();
         grunt.warn('Puppeteer timed out.');
+      },
+      'error': function (error) {
+        grunt.fail.warn(error);
       },
       'done': function (res) {
         const {
