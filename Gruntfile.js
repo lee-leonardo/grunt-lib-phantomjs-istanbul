@@ -122,7 +122,7 @@ module.exports = function (grunt) {
         grunt.log.writeln('debug:' + msg);
       },
       'console.log': function (response) {
-        grunt.log(response);
+        grunt.log.writeln(response);
       },
       'fail.load': function (url) {
         grunt.verbose.write('Running Puppeteer...').or.write('...');
