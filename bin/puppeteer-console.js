@@ -2,11 +2,11 @@
   Syntactic Sugar
  */
 class PuppeteerConsoleLog {
-  // 1:1 Interface with Puppeteer's ConsoleMessage
+  // 1:1 Interface with Puppeteer's ConsoleMessage, except that args hold any valid json rather than a Promise Handler
   constructor(
     type = "",
     text = "",
-    args = []
+    args = [] //[JSON]
   ) {
     this.type = type
     this.text = text
@@ -21,66 +21,20 @@ class PuppeteerConsoleError extends Error {
   }
 }
 
-//TODO need to work on this file!
-
-function defaultLog() {
-  return {
-    handler(consoleMessage, options) {
-      console.log(`Puppeteer Console Log:`);
-      console.log(`  Type: ${consoleMessage.type}`);
-      console.log(`  Arguments: ${consoleMessage.args}`);
-      console.log(`  Text: ${consoleMessage.text}`);
-    },
-    promise(consoleMessage, options) {
-      consoleMessage.args.forEach((promise) => {
-        promise.then((obj) => {
-
-          })
-          .catch()
-
-        try {
-
-
-          if (options.verbose) {
-            // const json = await promise.jsonValue()
-            // console.log(json);
-          }
-        } finally {}
-      });
-    },
-    options: {
-      verbose: false
-    },
-  }
-}
-
-function defaultTrace() {
-  return {
-    handler: (consoleMessage, options) => {
-      console.error(consoleMessage.text);
-    },
-    promise(consoleMessage, options) {
-      consoleMessage.args.forEach((promise) => {
-        promise.then((obj) => {
-
-        });
-        try {
-          if (options.verbose) {
-            // const json = await promise.jsonValue()
-            // console.log(json);
-          }
-        } finally {}
-      });
-    },
-    options: {
-      verbose: false
-    },
-  }
+//TODO is this a good api?
+function defaultLog({
+  param,
+  options,
+  ipc,
+  socket
+}) {
+  ipc.server.emit(socket, `console`, param)
 }
 
 module.exports = {
   consoleOpt: {
-    defaults: defaultLog(),
-    trace: defaultTrace()
-  }
+    defaults: defaultLog()
+  },
+  PuppeteerConsoleLog,
+  PuppeteerConsoleError
 }
