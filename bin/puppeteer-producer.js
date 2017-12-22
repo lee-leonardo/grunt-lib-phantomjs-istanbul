@@ -43,7 +43,17 @@ ipc.serve(() => {
         var testErrors = [];
         var assertionErrors = [];
 
-        await page.on('console', setup.generateLogger(consoleOptions));
+        ipc.server.emit(socket, "console.log", {
+          type: 'log',
+          text: 'wtf',
+          args: []
+        });
+
+        await page.on('console', setup.generateLogger({
+          settings: consoleOptions,
+          ipc,
+          socket
+        }));
 
         if (options.expose) {
           let entries = Object.entries(options.expose);

@@ -121,8 +121,8 @@ module.exports = function (grunt) {
       'debug': function (msg) {
         grunt.log.writeln('debug:' + msg);
       },
-      'console.log': function (message) {
-        grunt.log(message);
+      'console.log': function (response) {
+        grunt.log(response);
       },
       'fail.load': function (url) {
         grunt.verbose.write('Running Puppeteer...').or.write('...');
@@ -134,7 +134,12 @@ module.exports = function (grunt) {
         grunt.warn('Puppeteer timed out.');
       },
       'error': function (error) {
-        grunt.fail.warn(error);
+        var code = error.code;
+        var syscall = error.syscall;
+        // Ignore time out issue unless thrown from emitter.
+        if (!(code === 'ENOENT' || code === 'ECONNREFUSED') && syscall !== 'connect') {
+          grunt.fail.warn(error);
+        }
       },
       'done': function (res) {
         const {

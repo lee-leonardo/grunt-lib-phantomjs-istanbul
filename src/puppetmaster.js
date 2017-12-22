@@ -47,10 +47,8 @@ class PuppetMaster {
     // this.listener.connectTo(this.puppeteerId);
 
     //TODO deprecate this, use the other method, or at least rename the method
-    return self.exists()
-      .then(() => {
-        return self.spawnProducer()
-      }) // spawn the producer first, when it is fully online ~1.5s
+
+    return self.spawnProducer() // spawn the producer first, when it is fully online ~1.5s
       .then(() => {
         return self.spawnListener()
       }) // then spawn the emitter and sync it
@@ -65,6 +63,24 @@ class PuppetMaster {
       this.done();
       process.kill(1);
     })
+    // return self.exists()
+    //   .then(() => {
+    //     return self.spawnProducer()
+    //   }) // spawn the producer first, when it is fully online ~1.5s
+    //   .then(() => {
+    //     return self.spawnListener()
+    //   }) // then spawn the emitter and sync it
+    //   .then(() => {
+    //     self.listener.start()
+
+    //     return self
+    //   }) // the listener handles all events
+    // .catch((err) => {
+    //   console.log('The Application failed to start');
+    //   console.error(err);
+    //   this.done();
+    //   process.kill(1);
+    // })
   }
 
   // Ensures that the url path given is a valid path.
@@ -79,6 +95,7 @@ class PuppetMaster {
       }
 
       // TODO self.path needs to be the relevant object param to the test file.
+      // TODO rm when the path handler is in order
       fs.stat(self.path, (err, stat) => {
         if (err) return reject(err)
         if (stat.isFile()) return resolve()
@@ -86,7 +103,7 @@ class PuppetMaster {
       })
     })
     .catch(err => {
-      console.log('The application already existed')
+      console.log('The application already existed or the parameters passed were at issue')
       console.error(err);
       this.done();
       process.kill(1);

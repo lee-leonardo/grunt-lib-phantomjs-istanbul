@@ -1,9 +1,12 @@
-const { JSHandle } = require('puppeteer');
 const {
   launch,
-  viewport,
-  consoleOpt
+  viewport
 } = require('./puppeteer-defaults');
+const {
+  consoleOpt,
+  PuppeteerConsoleLog,
+  PuppeteerConsoleError
+} = require('./puppeteer-console');
 
 function launchOptions(...launcherOptions) {
   return Object.assign(launch, ...launcherOptions);
@@ -17,43 +20,99 @@ function consoleOptions(...consoleOptions) {
   return Object.assign(consoleOpt, ...consoleOptions)
 }
 
-function generateLogger(settings) {
+/*
+  generateLogger({ logType : handlerFunction }})
+  - Logger generator resolves most use cases of the logger.
+  - Essentially the output of the logger is passed back as json to the receiving socket.
+  - Puppeteer's api upon the console is here: https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-consolemessage
+  - For additional information on the handler object https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
+  - Use https://developer.mozilla.org/en-US/docs/Tools/Web_Console to understand how this logging works in more detail.
+
+  Gotchas:
+  - The JSHandle@<type> is an object that is a Promise that can be handled in multiple ways. To use this
+
+  pseudocode
+    for each console message object
+
+ */
+/*
+  ConsoleMessage
+    - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-consolemessage
+    - type: string: the type of logger
+    - text: string: the string representation of the object, non-primitives are marcated as JSHandle@<type>
+    - args: [JSHandle<object>]: a object that holds Promises to retrieve each individual argument from the context
+
+  JSHandle
+    - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
+    - contains functions that resolve promises that take a function may use the documents context
+  */
+function generateLogger({
+  settings,
+  ipc,
+  socket
+}) {
+  ipc.server.emit(socket, "console", { type: 'log', text: "testing testing", args: [{a:1,b:true}] });
+
   return (...params) => {
-    for (let i = 0; i < params.length; i++) {
-      //Puppeteer ConsoleMessage object: https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-consolemessage
-      const {
-        type,
-        text,
-        args
-      } = params[i];
-
-      // Handle traces in a different way but allow the trace functionality to be overridden, defaults
-      if (settings[type]) {
+    return Promise.all(
+      // If json, resolve json before passing, if string pass string
+      params.map(param => {
+        return new Promise((resolve, reject) => {
+          if (param.text.includes("JSHandle")) {
+            Promise.all(param.args.map(promise => promise.jsonValue()))
+              .then(args => {
+                return resolve(
+                  PuppeteerConsoleLog({
+                    type: param.type,
+                    text: param.text,
+                    args
+                  })
+                )
+              })
+              .catch(err => {
+                return reject(Error("Puppeteer Logger Error: unable to resolve: " + text))
+              })
+          } else {
+            return resolve(
+              PuppeteerConsoleLog({
+                type: param.type,
+                text: param.text
+              })
+            )
+          }
+        })
+      })
+    ).then(params => {
+      // Handle the event emission by type
+      params.map(param => {
         const {
-          handler,
-          promise = settings.defaults.promise,
-          options = settings.defaults.options
-        } = settings[type];
+          type, // logger types such as: log | error | warn | etc.
+        } = param;
 
-        handler({ type, text }, options);
-        promise({ args }, options); //TODO handle the JSON Handle Object - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
-      } else {
-        const {
-          handler,
-          promise,
-          options
-        } = settings.defaults
+        ipc.server.emit(socket, `console`, param)
 
-        handler({ type, text }, options);
-        promise({ args }, options); //TODO handle the JSON Handle Object - https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-jshandle
-      }
-    }
+        // if (settings[type]) {
+        //   // Handle traces in a different way but allow the trace functionality to be overridden, defaults
+        //   const {
+        //     handler = settings.defaults.handler,
+        //     options = settings.defaults.options
+        //   } = settings[type];
+        //   return handler({
+        //     param,
+        //     options,
+        //     ipc,
+        //     socket
+        //   })
+        // } else {
+        //   ipc.server.emit(socket, `console`, param)
+        // }
+      })
+    }).catch(err => ipc.server.emit(socket, 'error', err));
   }
 }
 
 module.exports = {
   initFromArgv: function (argv) {
-    //argv
     JSON.parse(cliOptString || {});
   },
   launchOptions: launchOptions,
