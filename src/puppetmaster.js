@@ -59,11 +59,12 @@ class PuppetMaster {
 
         return self
       }) // the listener handles all events
-    // .catch((err) => {
-    //   console.log('The Application failed to start');
-    //   console.error(err);
-    //   process.kill(1);
-    // })
+    .catch((err) => {
+      console.log('The Application failed to start');
+      console.error(err);
+      this.done();
+      process.kill(1);
+    })
   }
 
   // Ensures that the url path given is a valid path.
@@ -83,6 +84,12 @@ class PuppetMaster {
         if (stat.isFile()) return resolve()
         reject(Error(`Application path specified is not a file: ${self.path}`))
       })
+    })
+    .catch(err => {
+      console.log('The application already existed')
+      console.error(err);
+      this.done();
+      process.kill(1);
     })
   }
 
