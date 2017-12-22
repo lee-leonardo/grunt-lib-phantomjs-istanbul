@@ -19,8 +19,6 @@ const [
   opts // puppeteer options
 ] = args;
 const options = JSON.parse(opts || {});
-const launchOptions = setup.launchOptions(options.puppeteer);
-const viewportOptions = setup.viewPortOptions(options.viewport);
 
 ipc.config.id = 'producer'; //TODO make this editable by the cli or json
 ipc.config.retry = 1500;
@@ -31,31 +29,14 @@ ipc.serve(() => {
     connected = true;
     ipc.log("received data: ".log, data);
 
-    //TODO data is json so we can use that to infer many types of information such as what type of testing framework and other things like what event to emit events to!
+    // Configurations, from cli/json from startup and json from the test
+    const launchOptions = setup.launchOptions(options.puppeteer, data.launch);
+    const viewportOptions = setup.viewPortOptions(options.viewport, data.viewport);
+    const consoleOptions = setup.consoleOptions(options.console, data.console);
 
     puppeteer
       .launch(launchOptions)
       .then(async browser => {
-        // Configuring logger
-        const consoleOptions = setup.consoleOptions({
-          log: {
-            handler(consoleMessage, options) {
-              console.log(consoleMessage.text);
-              ipc.server.emit(socket, 'qunit.log', {
-                data: consoleMessage.text
-              });
-            }
-          },
-          error: {
-            handler(consoleMessage, options) {
-              console.error(consoleMessage.text);
-              ipc.server.emit(socket, 'qunit.error', {
-                error: consoleMessage.text
-              });
-            }
-          }
-        }, options.console);
-
         // Setup
         const page = await browser.newPage();
         var moduleErrors = [];
@@ -170,6 +151,13 @@ ipc.serve(() => {
           }
         }
 
+        /* TODO -> help out with developing the evaluate section a bit more... all fn need to be paths to functions.
+          // Work on three different options:
+            1. an array that is a string represenation of a function for Function() emit result to test
+            2. emit to grunt to test.
+            3. a script that can be injected into the dom, this resolves itself
+            4. a script that will evaluate based on a specific context
+        */
         /*
           // Result will emit to the key.
           options.evaluate: {
@@ -178,6 +166,8 @@ ipc.serve(() => {
           }
         */
         if (options.evaluate) {
+          ipc.emit(socket, 'error', Error("This is TBD"))
+
           if (options.evaluate.script) {
             const entries = Object.entries(script);
             let i = 0;
@@ -201,42 +191,13 @@ ipc.serve(() => {
           await page.evaluate(options.runner.script);
         }
 
-        /*
-          // Work on three different options:
-            1. an array that is a string represenation of a function for Function() emit result to test
-            2. emit to grunt to test.
-            3. a script that can be injected into the dom, this resolves itself
-            4. a script that will evaluate based on a specific context
-        */
-        //TODO rm
-        // await page.evaluate(() => {
-        //   QUnit.config.testTimeout = 10000;
-
-        //   // Cannot pass the window.harness_blah methods directly, because they are
-        //   // automatically defined as async methods, which QUnit does not support
-        //   QUnit.moduleDone((context) => {
-        //     window.harness_moduleDone(context);
-        //   });
-        //   QUnit.testDone((context) => {
-        //     window.harness_testDone(context);
-        //   });
-        //   QUnit.log((context) => {
-        //     window.harness_log(context);
-        //   });
-        //   QUnit.done((context) => {
-        //     window.harness_done(context);
-        //   });
-
-        //   console.log("\nRunning: " + JSON.stringify(QUnit.urlParams) + "\n");
-        // });
-
         function wait(ms) {
           return new Promise(resolve => setTimeout(resolve, ms));
         }
         await wait(ipc.config.retry);
 
         console.error("Tests timed out");
-        ipc.server.emit(socket, 'qunit.timeout');
+        ipc.server.emit(socket, 'test.timeout');
         browser.close();
       })
       .catch(err => {
@@ -244,6 +205,7 @@ ipc.serve(() => {
         process.exit(1);
       });
   });
+  //TODO this might not be necessary until we need a semaphore version.
   ipc.server.on('test.end', (data, socket) => {
     ipc.server.stop();
     process.exit(0);
