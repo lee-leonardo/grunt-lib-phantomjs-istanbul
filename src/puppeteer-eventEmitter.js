@@ -97,7 +97,7 @@ class PuppeteerEventListener extends EventEmitter {
   }
 
   async getBrowserAddress() {
-    return await new AddressHandler(this.url);
+    return await AddressHandler(this.url);
   }
 
   cleanup() {
