@@ -1,3 +1,4 @@
+/* jshint ignore:start */ // This is needed as es7 features are not supported in jshint as of Jan 01, 2018
 const EventEmitter = require('events');
 const ipc = require('node-ipc');
 
@@ -96,7 +97,7 @@ class PuppeteerEventListener extends EventEmitter {
   }
 
   async getBrowserAddress() {
-    return await AddressHandler(this.url)
+    return await new AddressHandler(this.url);
   }
 
   cleanup() {

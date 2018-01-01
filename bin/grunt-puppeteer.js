@@ -1,10 +1,12 @@
 #! /usr/bin/env node
 
+/* jshint ignore:start */ // This is needed as es7 features are not supported in jshint as of Jan 01, 2018
+
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const setup = require('./puppeteer-setup');
-const args = require('puppeteer-args').argv(process.argv, 3);
+const args = require('./puppeteer-args').argv(process.argv, 3);
 
 if (!args) {
   console.log("Usage: node run-qunit-chrome.js <URL> <timeout>");

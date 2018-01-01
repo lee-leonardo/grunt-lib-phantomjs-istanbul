@@ -1,5 +1,7 @@
 #! /usr/bin/env node
 
+/* jshint ignore:start */ // This is needed as es7 features are not supported in jshint as of Jan 01, 2018
+
 const ipc = require('node-ipc');
 const puppeteer = require('puppeteer');
 

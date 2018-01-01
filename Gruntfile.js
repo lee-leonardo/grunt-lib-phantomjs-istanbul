@@ -110,7 +110,7 @@ module.exports = function (grunt) {
       console.log('Test Finished');
       //TODO add some output testing here?
       done(isSuccessful);
-    }
+    };
 
     var PuppetMaster = require('./src/puppetmaster');
     var masterOfPuppets = new PuppetMaster(options);
@@ -166,8 +166,7 @@ module.exports = function (grunt) {
           done(error);
         }
       },
-
-    })
+    });
 
     masterOfPuppets.start();
   });
