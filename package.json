@@ -34,7 +34,7 @@
     "generateBin": "npm link"
   },
   "bin": {
-    "grunt-puppeteer": "./bin/grunt-puppeteer.js"
+    "grunt-puppeteer": "./bin/puppeteer-producer.js"
   },
   "dependencies": {
     "eventemitter2": "^0.4.9",
