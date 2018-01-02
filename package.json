@@ -1,6 +1,6 @@
 {
-  "name": "grunt-lib-phantomjs-istanbul",
-  "description": "Grunt and PhantomJS, sitting in a tree for istanbul based code coverage.",
+  "name": "grunt-lib-puppeteer-istanbul",
+  "description": "Grunt and Puppeteer, sitting in a tree for istanbul based code coverage.",
   "version": "0.0.1",
   "homepage": "https://github.com/lee-leonardo/grunt-lib-puppeteer-istanbul",
   "author": {
