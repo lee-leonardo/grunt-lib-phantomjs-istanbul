@@ -49,10 +49,14 @@
     "grunt-cli": "^0.1.13",
     "grunt-contrib-jshint": "^1.1.0"
   },
-  "main": "src/puppeteer",
+  "main": "src/puppetmaster",
   "files": [
     "src",
     "bin",
     "puppeteer"
+  ],
+  "keywords": [
+    "grunt",
+    "gruntplugin"
   ]
 }
