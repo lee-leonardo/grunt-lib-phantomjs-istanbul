@@ -1,3 +1,5 @@
+/* jshint ignore:start */ // This is needed as es7 features are not supported in jshint as of Jan 01, 2018
+
 const fs = require('fs')
 const {
   spawn
