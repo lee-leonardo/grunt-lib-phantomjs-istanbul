@@ -32,6 +32,7 @@ class PuppeteerEventListener extends EventEmitter {
     super();
 
     ipc.config.id = 'puppeteerConsumer:' + options.url;
+    ipc.config.silent = true || options.verbose;
     ipc.config.retry = 1500;
     ipc.config.maxConnections = 1;
     ipc.config.maxRetries = 5;

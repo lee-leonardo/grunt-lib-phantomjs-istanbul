@@ -2,6 +2,7 @@ const ipc = require('node-ipc');
 
 ipc.config.id = 'consumer';
 ipc.config.retry = 1000;
+ipc.config.silent = true;
 ipc.config.maxRetries = 5;
 ipc.config.maxConnections = 1;
 
