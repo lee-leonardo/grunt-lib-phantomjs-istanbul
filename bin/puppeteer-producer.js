@@ -59,7 +59,7 @@ ipc.serve(() => {
     connected = true;
     ipc.log("received data: ".log, data);
 
-    const options = setup.handleOptions(opts, data)
+    const options = setup.handleOptions(JSON.parse(opts || {}), data)
 
     puppeteer
       .launch(options.launch)
@@ -89,6 +89,7 @@ ipc.serve(() => {
           }
         }
 
+        // TODO do I need ot add the scripts before or after the page is navigated to? It'll be better if I can do it before....
         await page.goto(data.url);
         /*
           options.inject {
@@ -135,30 +136,23 @@ ipc.serve(() => {
             key: { pageFunction, ..args }
           }
         */
+
+        // TODO need to work on making this an async queue rather than synchronous as is now.
         if (options.evaluate) {
-          ipc.emit(socket, 'error', Error("This is TBD"))
+          const entries = Object.entries(options.evaluate);
+          let i = 0;
+          const len = entries.length;
+          for (let i = 0; i < len; i++) {
+            const [
+              eventName,
+              fn
+            ] = entries[i];
 
-          if (options.evaluate.script) {
-            const entries = Object.entries(script);
-            let i = 0;
-            const len = entries.length;
-            for (let i = 0; i < len; i++) {
-              const [
-                eventName,
-                fn
-              ] = entries[i];
-
-              const result = await page.evaluate(fn);
-              ipc.emit(key, {
-                result: JSON.parse(result)
-              });
-            }
+            const result = await page.evaluate(fn);
+            ipc.emit(key, {
+              result: JSON.parse(result)
+            });
           }
-        }
-
-        //TODO...
-        if (options.runner) {
-          await page.evaluate(options.runner.script);
         }
 
         function wait(ms) {

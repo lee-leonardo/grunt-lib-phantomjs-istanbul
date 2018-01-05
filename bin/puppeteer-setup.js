@@ -12,16 +12,87 @@ const {
 // remove inject and evaluate
 // iterate and assign
 // handle inject and evaluate for their
+
+//TODO need to handle a default logger in this path...
 function handleOptions(options, data) {
-  const options = JSON.parse(opts || {});
-  const entries = Object.entries(options);
+  let result = setDefaults({
+    launch: launch,
+    viewport: viewport
+    inject = {}
+  }, options);
 
+  result = overrideDefaults(result, data);
+  result.inject = {
+    script: handleInjections(result.inject.script, data.inject.script)
+    style: handleInjections(result.inject.style, data.inject.style)
+  }
 
-  const launchOptions = setup.launchOptions(options.puppeteer, data.launch);
-  const viewportOptions = setup.viewPortOptions(options.viewport, data.viewport);
-  const consoleOptions = setup.consoleOptions(options.console, data.console);
+  return result
+}
 
-  return options
+function setDefaults(result, defaults) {
+  let keys = Object.keys(options);
+
+  keys = keys.forEach(key => {
+    if (key !== "inject") {
+      result[key] = defaults[key]
+    }
+  })
+
+  return result
+}
+
+function overrideDefaults(result, data) {
+  let keys = Object.keys(options);
+
+   keys.forEach(key => {
+      if (key !== "inject") {
+        let value = data[key]
+
+        if (typeof value === "object") {
+          result[key] = Object.assign(result[key], value)
+        }
+        else {
+          result[key] = value
+        }
+      }
+    })
+    return result
+}
+
+function handleInjections(defaults = {}, data = {}) {
+  let entries = Object.entries(defaults).concat(Object.entries(data))
+  let result = entries.map(entry => {
+    const [
+        key,
+        path
+    ]
+    let o = {}
+    o[key] = path
+
+    return o
+  }) //map to objects
+  .reduce((l,r) => Object.assign(l,r)) // reduce to one object, overriding defaults with data
+
+  Object.entries(result)
+    .forEach(entry => {
+      const [
+        key,
+        path
+      ]
+      result[key] = getScript(entry)
+    })
+
+  return result
+}
+
+function getScript(entry) {
+  const [
+    key,
+    fnPath
+  ] = entry
+
+  return require(fnPath)
 }
 
 /*
