@@ -8,16 +8,20 @@ const {
   PuppeteerConsoleError
 } = require('./puppeteer-console');
 
-function launchOptions(...launcherOptions) {
-  return Object.assign(launch, ...launcherOptions);
-};
+// get values
+// remove inject and evaluate
+// iterate and assign
+// handle inject and evaluate for their
+function handleOptions(options, data) {
+  const options = JSON.parse(opts || {});
+  const entries = Object.entries(options);
 
-function viewPortOptions(...viewportOptions) {
-  return Object.assign(viewport, ...viewportOptions);
-}
 
-function consoleOptions(...consoleOptions) {
-  return Object.assign(consoleOpt, ...consoleOptions)
+  const launchOptions = setup.launchOptions(options.puppeteer, data.launch);
+  const viewportOptions = setup.viewPortOptions(options.viewport, data.viewport);
+  const consoleOptions = setup.consoleOptions(options.console, data.console);
+
+  return options
 }
 
 /*
@@ -116,8 +120,6 @@ module.exports = {
   initFromArgv: function (argv) {
     JSON.parse(cliOptString || {});
   },
-  launchOptions: launchOptions,
-  viewPortOptions: viewPortOptions,
-  consoleOptions: consoleOptions,
+  handleOptions: handleOptions,
   generateLogger: generateLogger
 };
