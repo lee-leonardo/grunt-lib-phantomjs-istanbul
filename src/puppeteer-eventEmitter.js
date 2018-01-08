@@ -82,10 +82,18 @@ class PuppeteerEventListener extends EventEmitter {
       this.addEventSet(eventHandlerMapOptional);
     }
 
+    const self = this
     const entries = Object.entries(this.eventsMap);
     const len = entries.length;
 
     ipc.connectTo(socketId, () => {
+      ipc.of[socketId].on('connect', () => {
+        ipc.of[socketId].emit('test.page', {
+          url: self.url,
+          // TODO passing event listeners, injections and etc.
+        })
+      })
+
       for (let i = 0; i < len; i++) {
         const [
           event,
