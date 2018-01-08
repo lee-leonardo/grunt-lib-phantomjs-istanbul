@@ -91,6 +91,17 @@ class PuppeteerEventListener extends EventEmitter {
         ipc.of[socketId].emit('test.page', {
           url: self.url,
           // TODO passing event listeners, injections and etc.
+          expose: {},
+          inject: {},
+          evaluate: {},
+          launch: {},
+          viewport: {},
+          console: {},
+          inject: {
+            script: {},
+            style: {}
+          },
+          evaluate: {}
         })
       })
 
