@@ -4,15 +4,13 @@
 /*
   // from cli
   options: {
-    isHttp: boolean // determines whether or not to use puppeteer.launch (https or file)
-    isSocket: boolean // puppeteer.connect (connect to socket)
     puppeteer: {}, // same as launch https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteerlaunchoptions
     viewport: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pagesetviewportviewport
     console: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#event-console
     expose: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageexposefunctionname-puppeteerfunction
     inject: {
-      scripts: {} // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
-      styles: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddstyletagoptions
+      script: {} // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
+      style: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddstyletagoptions
     },
     evaluate: {} // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageevaluatepagefunction-args
   }
@@ -24,8 +22,8 @@
     console: {},
     expose: {},
     inject: {
-      scripts: {}
-      styles: {},
+      script: {}
+      style: {},
     },
     evaluate: {}
   }
