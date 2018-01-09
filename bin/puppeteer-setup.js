@@ -17,13 +17,13 @@ const {
 function handleOptions(options, data) {
   let result = setDefaults({
     launch: launch,
-    viewport: viewport
+    viewport: viewport,
     inject = {}
   }, options);
 
   result = overrideDefaults(result, data);
   result.inject = {
-    script: handleInjections(result.inject.script, data.inject.script)
+    script: handleInjections(result.inject.script, data.inject.script),
     style: handleInjections(result.inject.style, data.inject.style)
   }
 
