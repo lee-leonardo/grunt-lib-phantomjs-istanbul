@@ -70,7 +70,7 @@ function generateLogger({
                 )
               })
               .catch(err => {
-                return reject(Error("Puppeteer Logger Error: unable to resolve: " + text))
+                return reject(err)
               })
           } else {
             return resolve(
