@@ -8,16 +8,91 @@ const {
   PuppeteerConsoleError
 } = require('./puppeteer-console');
 
-function launchOptions(...launcherOptions) {
-  return Object.assign(launch, ...launcherOptions);
-};
+// get values
+// remove inject and evaluate
+// iterate and assign
+// handle inject and evaluate for their
 
-function viewPortOptions(...viewportOptions) {
-  return Object.assign(viewport, ...viewportOptions);
+//TODO need to handle a default logger in this path...
+function handleOptions(options, data) {
+  let result = setDefaults({
+    launch: launch,
+    viewport: viewport
+    inject = {}
+  }, options);
+
+  result = overrideDefaults(result, data);
+  result.inject = {
+    script: handleInjections(result.inject.script, data.inject.script)
+    style: handleInjections(result.inject.style, data.inject.style)
+  }
+
+  return result
 }
 
-function consoleOptions(...consoleOptions) {
-  return Object.assign(consoleOpt, ...consoleOptions)
+function setDefaults(result, defaults) {
+  let keys = Object.keys(options);
+
+  keys = keys.forEach(key => {
+    if (key !== "inject") {
+      result[key] = defaults[key]
+    }
+  })
+
+  return result
+}
+
+function overrideDefaults(result, data) {
+  let keys = Object.keys(options);
+
+   keys.forEach(key => {
+      if (key !== "inject") {
+        let value = data[key]
+
+        if (typeof value === "object") {
+          result[key] = Object.assign(result[key], value)
+        }
+        else {
+          result[key] = value
+        }
+      }
+    })
+    return result
+}
+
+function handleInjections(defaults = {}, data = {}) {
+  let entries = Object.entries(defaults).concat(Object.entries(data))
+  let result = entries.map(entry => {
+    const [
+        key,
+        path
+    ]
+    let o = {}
+    o[key] = path
+
+    return o
+  }) //map to objects
+  .reduce((l,r) => Object.assign(l,r)) // reduce to one object, overriding defaults with data
+
+  Object.entries(result)
+    .forEach(entry => {
+      const [
+        key,
+        path
+      ]
+      result[key] = getScript(entry)
+    })
+
+  return result
+}
+
+function getScript(entry) {
+  const [
+    key,
+    fnPath
+  ] = entry
+
+  return require(fnPath)
 }
 
 /*
@@ -116,8 +191,6 @@ module.exports = {
   initFromArgv: function (argv) {
     JSON.parse(cliOptString || {});
   },
-  launchOptions: launchOptions,
-  viewPortOptions: viewPortOptions,
-  consoleOptions: consoleOptions,
+  handleOptions: handleOptions,
   generateLogger: generateLogger
 };
