@@ -1,35 +1,6 @@
 #! /usr/bin/env node
 
 /* jshint ignore:start */ // This is needed as es7 features are not supported in jshint as of Jan 01, 2018
-/*
-  // from cli
-  options: {
-    isHttp: boolean // determines whether or not to use puppeteer.launch (https or file)
-    isSocket: boolean // puppeteer.connect (connect to socket)
-    puppeteer: {}, // same as launch https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteerlaunchoptions
-    viewport: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pagesetviewportviewport
-    console: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#event-console
-    expose: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageexposefunctionname-puppeteerfunction
-    inject: {
-      scripts: {} // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
-      styles: {}, // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddstyletagoptions
-    },
-    evaluate: {} // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageevaluatepagefunction-args
-  }
-
-  // from
-  data: {
-    launch: {}, // puppeteer from above
-    viewport: {},
-    console: {},
-    expose: {},
-    inject: {
-      scripts: {}
-      styles: {},
-    },
-    evaluate: {}
-  }
-*/
 
 const ipc = require('node-ipc');
 const puppeteer = require('puppeteer');
@@ -49,6 +20,7 @@ var connected = false;
 const [
   opts // puppeteer options
 ] = args;
+const options = JSON.parse(opts || {});
 
 ipc.config.id = 'producer'; //TODO make this editable by the cli or json
 ipc.config.retry = 1500;
@@ -59,10 +31,13 @@ ipc.serve(() => {
     connected = true;
     ipc.log("received data: ".log, data);
 
-    const options = setup.handleOptions(JSON.parse(opts || {}), data)
+    // Configurations, from cli/json from startup and json from the test
+    const launchOptions = setup.launchOptions(options.puppeteer, data.launch);
+    const viewportOptions = setup.viewPortOptions(options.viewport, data.viewport);
+    const consoleOptions = setup.consoleOptions(options.console, data.console);
 
     puppeteer
-      .launch(options.launch)
+      .launch(launchOptions)
       .then(async browser => {
         // Setup
         const page = await browser.newPage();
@@ -71,7 +46,7 @@ ipc.serve(() => {
         var assertionErrors = [];
 
         await page.on('console', setup.generateLogger({
-          settings: options.console,
+          settings: consoleOptions,
           ipc: ipc,
           socket: socket
         }));
@@ -89,7 +64,6 @@ ipc.serve(() => {
           }
         }
 
-        // TODO do I need ot add the scripts before or after the page is navigated to? It'll be better if I can do it before....
         await page.goto(data.url);
         /*
           options.inject {
@@ -101,23 +75,23 @@ ipc.serve(() => {
         */
         if (options.inject) {
           if (options.inject.script) {
-            if (Array.isArray(options.inject.script)) {
-              let len = options.inject.script.length;
+            if (Array.isArray(options.test.script)) {
+              let len = options.test.script.length;
               for (let i = 0; i < len; i++) {
-                await page.addScriptTag(options.inject.script[i]);
+                await page.addScriptTag(options.test.script[i]);
               }
             } else {
-              await page.addScriptTag(options.inject.script);
+              await page.addScriptTag(options.test.script);
             }
           }
           if (options.inject.style) {
-            if (Array.isArray(options.inject.script)) {
-              let len = options.inject.script.length;
+            if (Array.isArray(options.test.script)) {
+              let len = options.test.script.length;
               for (let i = 0; i < len; i++) {
-                await page.addStyleTag(options.inject.style[i]);
+                await page.addStyleTag(options.test.style[i]);
               }
             } else {
-              await page.addStyleTag(options.inject.style);
+              await page.addStyleTag(options.test.style);
             }
           }
         }
@@ -136,23 +110,30 @@ ipc.serve(() => {
             key: { pageFunction, ..args }
           }
         */
-
-        // TODO need to work on making this an async queue rather than synchronous as is now.
         if (options.evaluate) {
-          const entries = Object.entries(options.evaluate);
-          let i = 0;
-          const len = entries.length;
-          for (let i = 0; i < len; i++) {
-            const [
-              eventName,
-              fn
-            ] = entries[i];
+          ipc.emit(socket, 'error', Error("This is TBD"))
 
-            const result = await page.evaluate(fn);
-            ipc.emit(key, {
-              result: JSON.parse(result)
-            });
+          if (options.evaluate.script) {
+            const entries = Object.entries(script);
+            let i = 0;
+            const len = entries.length;
+            for (let i = 0; i < len; i++) {
+              const [
+                eventName,
+                fn
+              ] = entries[i];
+
+              const result = await page.evaluate(fn);
+              ipc.emit(key, {
+                result: JSON.parse(result)
+              });
+            }
           }
+        }
+
+        //TODO...
+        if (options.runner) {
+          await page.evaluate(options.runner.script);
         }
 
         function wait(ms) {
